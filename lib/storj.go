@@ -19,6 +19,7 @@ const bucketName = "shift"
 
 func initStorj(context context.Context) {
 	ctx = context
+
 	accessGrant := flag.String("access", DecryptStringGCM(storjAccessTokenEnc), "access grant from satellite")
 	access, _ = uplink.ParseAccess(*accessGrant)
 }

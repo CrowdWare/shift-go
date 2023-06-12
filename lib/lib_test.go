@@ -188,6 +188,7 @@ func TestSerialize(t *testing.T) {
 }
 
 func TestStorj(t *testing.T) {
+	Init("/tmp")
 	initStorj(context.Background())
 
 	uploadBuffer := []byte("one fish two fish red fish blue fish")
@@ -252,6 +253,7 @@ func TestCalculateWorth(t *testing.T) {
 }
 
 func TestAddTransaction(t *testing.T) {
+	Init("/tmp")
 	account = Account{}
 	AddTransaction(10, "Purp", time.Now(), "fr", InitialBooking)
 	for i := 0; i < 31; i++ {
@@ -280,6 +282,7 @@ func TestAddTransaction(t *testing.T) {
 
 func TestAddScooping(t *testing.T) {
 	Init("/tmp")
+
 	account = Account{Level_1_count: 10, Level_2_count: 98, Level_3_count: 786}
 	amount := calcGrowPer20Minutes()
 	if amount != 1691 {
