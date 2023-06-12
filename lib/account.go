@@ -19,16 +19,20 @@ const (
 )
 
 type Account struct {
-	Name         string
-	Language     string
-	PrivateKey   []byte
-	Scooping     time.Time
-	IsScooping   bool
-	Transactions []Transaction
+	Name          string
+	Language      string
+	PrivateKey    []byte
+	Scooping      time.Time
+	IsScooping    bool
+	Level_1_count int
+	Level_2_count int
+	Level_3_count int
+	Transactions  []Transaction
+	Scoopings     []Transaction
 }
 
 type Transaction struct {
-	Amount  uint64
+	Amount  int64
 	Date    time.Time
 	From    string
 	Purpose string
@@ -86,7 +90,7 @@ func GetTransactions() []Transaction {
 }
 
 func AddTransaction(amount int64, purpose string, date time.Time, from string, typ TransactionType) {
-	account.Transactions = append(account.Transactions, Transaction{Amount: uint64(amount), Date: date, From: from, Purpose: purpose, Typ: typ})
+	account.Transactions = append(account.Transactions, Transaction{Amount: amount, Date: date, From: from, Purpose: purpose, Typ: typ})
 	if len(account.Transactions) > 30 {
 		// create a subtotal and delete first transaction
 		account.Transactions[1].Amount += account.Transactions[0].Amount
@@ -95,12 +99,46 @@ func AddTransaction(amount int64, purpose string, date time.Time, from string, t
 		account.Transactions[1].Typ = Subtotal
 		account.Transactions = account.Transactions[1:]
 	}
+	if typ != Scooping { // don't write when Scooping
+		WriteAccount()
+	}
+}
+
+func AddScooping(amount int64, date time.Time) {
+	// when the last scooping has been added yesterday, then sum up the scooping and create a new transaction
+	len := len(account.Scoopings)
+	if len > 0 && account.Scoopings[len-1].Date.Day() != date.Day() {
+		milliLiter := int64(0)
+		for _, t := range account.Scoopings {
+			milliLiter += t.Amount
+		}
+		AddTransaction(milliLiter/1000, "", date, "", Scooping)
+		account.Scoopings = make([]Transaction, 0)
+	}
+	account.Scoopings = append(account.Scoopings, Transaction{Amount: amount, Date: date})
+	WriteAccount()
 }
 
 func GetBalance() int64 {
 	balance := int64(0)
 	for _, t := range account.Transactions {
-		balance += int64(t.Amount)
+		balance += t.Amount
 	}
 	return balance
+}
+
+func calcGrowPer20Minutes() int64 {
+	growPer20Minutes := int64(165) +
+		int64(min(account.Level_1_count, 10))*int64(25) +
+		int64(min(account.Level_2_count, 100))*int64(5) +
+		int64(min(account.Level_3_count, 1000))*int64(1)
+
+	return growPer20Minutes
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

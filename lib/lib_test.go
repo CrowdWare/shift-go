@@ -277,3 +277,28 @@ func TestAddTransaction(t *testing.T) {
 		t.Errorf("Exception typ to be Subtotal but got %d", account.Transactions[0].Typ)
 	}
 }
+
+func TestAddScooping(t *testing.T) {
+	Init("/tmp")
+	account = Account{Level_1_count: 10, Level_2_count: 98, Level_3_count: 786}
+	amount := calcGrowPer20Minutes()
+	if amount != 1691 {
+		t.Errorf("Expected 1691 but got %d", amount)
+	}
+	today := time.Now()
+	for i := 0; i < 24*3; i++ {
+		AddScooping(calcGrowPer20Minutes(), today)
+	}
+	today = today.AddDate(0, 0, 1)
+	AddScooping(calcGrowPer20Minutes(), today)
+	if len(account.Transactions) < 1 {
+		t.Error("Expected 1 row count but got 0")
+
+	} else {
+		amount := account.Transactions[0].Amount
+		if amount != 121 {
+			t.Errorf("Expected amount to be 12 but got %d", amount)
+		}
+	}
+	os.Remove("/tmp/shift.db")
+}
