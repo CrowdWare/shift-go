@@ -2,9 +2,11 @@ package lib
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"encoding/hex"
 	"errors"
+	"log"
 	"os"
 	"reflect"
 	"testing"
@@ -182,5 +184,96 @@ func TestSerialize(t *testing.T) {
 	}
 	if !reflect.DeepEqual(acc, acc2) {
 		t.Errorf("Account mismatch:\nExpected: %v\nGot: %v", acc, acc2)
+	}
+}
+
+func TestStorj(t *testing.T) {
+	initStorj(context.Background())
+
+	uploadBuffer := []byte("one fish two fish red fish blue fish")
+	err := put("foo/bar/baz", uploadBuffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	buffer, err := get("foo/bar/baz")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if !bytes.Equal(uploadBuffer, buffer) {
+		t.Error("Storj buffers are not identical")
+	}
+
+	err = delete("foo/bar/baz")
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func TestCalculateWorth(t *testing.T) {
+	amount := int64(1)
+	today := time.Now()
+
+	result := CalculateWorthInMillis(amount, today)
+	expectedWorth := int64(1000)
+	if result != expectedWorth {
+		t.Errorf("Expected worth of %d, but got %d", expectedWorth, result)
+	}
+
+	result = CalculateWorthInMillis(amount, today.AddDate(0, 0, -30))
+	expectedWorth = int64(922)
+	if result != expectedWorth {
+		t.Errorf("Expected worth of %d, but got %d", expectedWorth, result)
+	}
+	// nothing left after 7 years
+	sevenYearsAgo := today.AddDate(0, -7*12, 0)
+	expectedWorth = int64(0)
+	result = CalculateWorthInMillis(amount, sevenYearsAgo)
+	if result != expectedWorth {
+		t.Errorf("Expected worth of %d, but got %d", expectedWorth, result)
+	}
+
+	// seven years - 2 days
+	sevenYearsAgo = today.AddDate(0, -7*12, 2)
+	expectedWorth = int64(1)
+	result = CalculateWorthInMillis(amount, sevenYearsAgo)
+	if result != expectedWorth {
+		t.Errorf("Expected worth of %d, but got %d", expectedWorth, result)
+	}
+
+	// seven years - 2 days - double amount
+	sevenYearsAgo = today.AddDate(0, -7*12, 2)
+	expectedWorth = int64(2)
+	result = CalculateWorthInMillis(amount+1, sevenYearsAgo)
+	if result != expectedWorth {
+		t.Errorf("Expected worth of %d, but got %d", expectedWorth, result)
+	}
+}
+
+func TestAddTransaction(t *testing.T) {
+	account = Account{}
+	AddTransaction(10, "Purp", time.Now(), "fr", InitialBooking)
+	for i := 0; i < 31; i++ {
+		AddTransaction(10, "Purp", time.Now(), "fr", Scooping)
+	}
+	if len(account.Transactions) != 30 {
+		t.Errorf("Expected transaction length is 30 but got %d", len(account.Transactions))
+	}
+
+	balance := GetBalance()
+	if balance != 320 {
+		t.Errorf("Expected balance is 320 but got %d", balance)
+	}
+
+	AddTransaction(34, "Purp", time.Now(), "ssd", Lmp)
+
+	balance = GetBalance()
+	if balance != 354 {
+		t.Errorf("Expected balance is 354 but got %d", balance)
+	}
+
+	if account.Transactions[0].Typ != Subtotal {
+		t.Errorf("Exception typ to be Subtotal but got %d", account.Transactions[0].Typ)
 	}
 }
