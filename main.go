@@ -8,7 +8,6 @@ import (
 
 func main() {
 	fmt.Println("Shift")
-	lib.Init("")
 	enc := lib.EncryptStringGCM("this is a test lorem ipsum dolor simit aroiun ghs")
 	fmt.Println("enc:", enc)
 	plain := lib.DecryptStringGCM(enc)

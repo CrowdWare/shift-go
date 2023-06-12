@@ -1,16 +1,14 @@
 package lib
 
 var dbFile string
-var secretKey []byte
 var account Account
 var algorithm string
 
 const (
-	algoEnc = "44880922281e9a7d9ba243b2599fcbcf41fd8199b0d059a7b373abdc5f0447380b13b620239871ba3b7db08ca8"
+	algoEnc = "eb292f2bac576dededa38a1ff0f5280347be2887ffe8ae11d640759dcfe60e6d09140ddb20ae2d3d10a8cb85a6"
 )
 
 func Init(filesDir string) {
 	dbFile = filesDir + "/shift.db"
-	generateSecretKey()
 	algorithm = DecryptStringGCM(algoEnc)
 }

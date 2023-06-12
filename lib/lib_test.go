@@ -129,7 +129,7 @@ func TestEncryptDecryptFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	generateSecretKey()
+
 	// Read and decrypt the content from the file
 	decryptedContent, err := readFile(dbFile)
 	if err != nil {

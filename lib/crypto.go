@@ -10,41 +10,58 @@ import (
 	"time"
 )
 
-func generateSecretKey() error {
+func generateSecretKey(db bool) ([]byte, error) {
 	// Declare the variables used for key derivation
 	var value3 int
+	var empty []byte
 
 	// Check if the file exists
-	if fileInfo, err := os.Stat(dbFile); os.IsNotExist(err) {
-		// Use the current date as a fallback value
-		value3 = time.Now().Day()
-	} else if err != nil {
-		return err
-	} else {
-		// Retrieve the file's modification time
-		modTime := fileInfo.ModTime()
-		value3 = modTime.Day()
+	if db {
+		if fileInfo, err := os.Stat(dbFile); os.IsNotExist(err) {
+			// Use the current date as a fallback value
+			value3 = time.Now().Day()
+		} else if err != nil {
+			return empty, err
+		} else {
+			// Retrieve the file's modification time
+			modTime := fileInfo.ModTime()
+			value3 = modTime.Day()
+		}
 	}
-
 	// Define the variables used for key derivation
 	var variable1 = 7539
 	var variable2 = 2375
 
 	// Perform calculations to derive the key
-	derivedKey := variable1 * variable2 * value3
+	derivedKey := int64(variable1 * variable2 * value3 * 9736635 * 42367736)
 
 	// Convert the derived key to a 32-byte slice
 	key := make([]byte, 32)
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 8; i++ {
 		key[i] = byte(derivedKey >> (i * 8))
 	}
-	secretKey = key
+	derivedKey = int64(variable1 + variable2*value3*9736635*42367736)
+	for i := 8; i < 16; i++ {
+		key[i] = byte(derivedKey >> ((i - 8) * 8))
+	}
+	derivedKey = int64(variable1 + variable2 + value3*9736635*42367736)
+	for i := 16; i < 24; i++ {
+		key[i] = byte(derivedKey >> ((i - 16) * 8))
+	}
+	derivedKey = int64(variable1*variable2 + value3*9736615*42367736)
+	for i := 24; i < 32; i++ {
+		key[i] = byte(derivedKey >> ((i - 24) * 8))
+	}
 
-	return nil
+	return key, nil
 }
 
 func EncryptStringGCM(value string) string {
-	block, err := aes.NewCipher(secretKey)
+	key, err := generateSecretKey(false)
+	if err != nil {
+		log.Fatal(err)
+	}
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,7 +82,10 @@ func EncryptStringGCM(value string) string {
 }
 
 func EncryptBytesGCM(plaintext []byte) ([]byte, []byte, error) {
-	key := []byte(secretKey)
+	key, err := generateSecretKey(true)
+	if err != nil {
+		log.Fatal(err)
+	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, nil, err
@@ -87,7 +107,11 @@ func EncryptBytesGCM(plaintext []byte) ([]byte, []byte, error) {
 }
 
 func DecryptStringGCM(value string) string {
-	block, err := aes.NewCipher(secretKey)
+	key, err := generateSecretKey(false)
+	if err != nil {
+		log.Fatal(err)
+	}
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -113,7 +137,11 @@ func DecryptStringGCM(value string) string {
 }
 
 func DecryptBytesGCM(ciphertext, nonce []byte) ([]byte, error) {
-	block, err := aes.NewCipher(secretKey)
+	key, err := generateSecretKey(true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
