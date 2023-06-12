@@ -1,3 +1,4 @@
 *.jar
 *.aar
 .DS_Store
+shift-go
