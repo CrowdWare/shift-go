@@ -1,2 +1,3 @@
 *.jar
 *.aar
+.DS_Store
