@@ -56,10 +56,17 @@ func generateSecretKey(db bool) ([]byte, error) {
 	return key, nil
 }
 
-func EncryptStringGCM(value string) string {
-	key, err := generateSecretKey(false)
-	if err != nil {
-		log.Fatal(err)
+func EncryptStringGCM(value string, webservice bool) string {
+	var key []byte
+	var err error
+
+	if webservice {
+		key = []byte("1234567890123456")
+	} else {
+		key, err = generateSecretKey(false)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	block, err := aes.NewCipher(key)
 	if err != nil {

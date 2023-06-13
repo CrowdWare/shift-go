@@ -20,7 +20,10 @@ const (
 
 type Account struct {
 	Name          string
+	Uuid          string
+	Ruuid         string
 	Language      string
+	Country       string
 	PrivateKey    []byte
 	Scooping      time.Time
 	IsScooping    bool

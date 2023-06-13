@@ -35,7 +35,7 @@ func TestReadAccount(t *testing.T) {
 func TestEncryptDecrypt(t *testing.T) {
 	Init("")
 	teststring := "The quick brown fox"
-	enc := EncryptStringGCM(teststring)
+	enc := EncryptStringGCM(teststring, false)
 	result := DecryptStringGCM(enc)
 	expected := teststring
 	if result != expected || enc == teststring {
