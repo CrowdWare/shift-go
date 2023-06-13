@@ -17,7 +17,7 @@ func fileExists(filePath string) bool {
 }
 
 func writeFile(filename string, content []byte) error {
-	ciphertext, nonce, err := EncryptBytesGCM(content)
+	ciphertext, nonce, err := encryptBytesGCM(content)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func readFile(filename string) ([]byte, error) {
 	nonce := contentWithNonce[:12]
 	ciphertext := contentWithNonce[12:]
 
-	plaintext, err := DecryptBytesGCM(ciphertext, nonce)
+	plaintext, err := decryptBytesGCM(ciphertext, nonce)
 	if err != nil {
 		return nil, err
 	}

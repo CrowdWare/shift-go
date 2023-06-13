@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 /*	Make the life of the hackers a bit harder ;-)
@@ -59,14 +60,14 @@ func CreateAccount(
 	}
 
 	client := http.Client{}
-	url := DecryptStringGCM(servive_url_enc) + "register"
+	url := decryptStringGCM(servive_url_enc) + "register"
 	jsonParams := make(map[string]interface{})
 	testValue := "false"
 	if test {
 		testValue = "true"
 	}
-	api_key := DecryptStringGCM(api_key_enc)[:16]
-	jsonParams["key"] = EncryptStringGCM(api_key, true)
+	api_key := decryptStringGCM(api_key_enc)[:16]
+	jsonParams["key"] = encryptStringGCM(api_key, true)
 	jsonParams["name"] = account.Name
 	jsonParams["uuid"] = account.Uuid
 	jsonParams["ruuid"] = account.Ruuid
@@ -100,7 +101,115 @@ func CreateAccount(
 		log.Println("Error occured calling [register]: " + message)
 		return ServiceError
 	} else {
-		WriteAccount()
+		writeAccount()
 		return Success
+	}
+}
+
+func SetScooping(test bool) int {
+	client := http.Client{}
+	url := decryptStringGCM(servive_url_enc) + "setscooping"
+	jsonParams := make(map[string]interface{})
+	testValue := "false"
+	if test {
+		testValue = "true"
+	}
+	api_key := decryptStringGCM(api_key_enc)[:16]
+	jsonParams["key"] = encryptStringGCM(api_key, true)
+	jsonParams["uuid"] = account.Uuid
+	jsonParams["test"] = testValue
+
+	jsonBytes, _ := json.Marshal(jsonParams)
+	entity := bytes.NewBuffer(jsonBytes)
+
+	req, _ := http.NewRequest("POST", url, entity)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", user_agent)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return NetworkError
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("Error: %s\n", resp.Status)
+		return ServiceError
+	}
+	body, _ := ioutil.ReadAll(resp.Body)
+	jsonResponse := make(map[string]interface{})
+	json.Unmarshal(body, &jsonResponse)
+	isError := jsonResponse["isError"].(bool)
+	message := jsonResponse["message"].(string)
+	if isError {
+		log.Println("Error occured calling [register]: " + message)
+		return ServiceError
+	} else {
+		account.Level_1_count = int(jsonResponse["count_1"].(float64))
+		account.Level_2_count = int(jsonResponse["count_2"].(float64))
+		account.Level_3_count = int(jsonResponse["count_3"].(float64))
+		account.Scooping = time.Now()
+		writeAccount()
+		return Success
+	}
+}
+
+func GetMatelist(test bool) (int, []Friend) {
+	emptyList := make([]Friend, 0)
+	client := http.Client{}
+	url := decryptStringGCM(servive_url_enc) + "matelist"
+	jsonParams := make(map[string]interface{})
+	testValue := "false"
+	if test {
+		testValue = "true"
+	}
+	api_key := decryptStringGCM(api_key_enc)[:16]
+	jsonParams["key"] = encryptStringGCM(api_key, true)
+	jsonParams["uuid"] = account.Uuid
+	jsonParams["test"] = testValue
+
+	jsonBytes, _ := json.Marshal(jsonParams)
+	entity := bytes.NewBuffer(jsonBytes)
+
+	req, _ := http.NewRequest("POST", url, entity)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", user_agent)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return NetworkError, emptyList
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("Error: %s\n", resp.Status)
+		return ServiceError, emptyList
+	}
+	body, _ := ioutil.ReadAll(resp.Body)
+	jsonResponse := make(map[string]interface{})
+	json.Unmarshal(body, &jsonResponse)
+	isError := jsonResponse["isError"].(bool)
+	message := jsonResponse["message"].(string)
+	if isError {
+		log.Println("Error occured calling [register]: " + message)
+		return ServiceError, emptyList
+	} else {
+		data := jsonResponse["data"].([]interface{})
+		dataList := make([]Friend, len(data))
+		for i, item := range data {
+			dataObj := item.(map[string]interface{})
+			name := dataObj["name"].(string)
+			scooping := dataObj["scooping"].(bool)
+			uuid := dataObj["uuid"].(string)
+			country := dataObj["country"].(string)
+			friendsCount := int(dataObj["friends_count"].(float64))
+			friend := Friend{
+				Name:         name,
+				Scooping:     scooping,
+				Uuid:         uuid,
+				Country:      country,
+				FriendsCount: friendsCount,
+			}
+			dataList[i] = friend
+		}
+		return Success, dataList
 	}
 }

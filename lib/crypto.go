@@ -56,7 +56,7 @@ func generateSecretKey(db bool) ([]byte, error) {
 	return key, nil
 }
 
-func EncryptStringGCM(value string, webservice bool) string {
+func encryptStringGCM(value string, webservice bool) string {
 	var key []byte
 	var err error
 
@@ -88,7 +88,7 @@ func EncryptStringGCM(value string, webservice bool) string {
 	return hex.EncodeToString(ciphertext)
 }
 
-func EncryptBytesGCM(plaintext []byte) ([]byte, []byte, error) {
+func encryptBytesGCM(plaintext []byte) ([]byte, []byte, error) {
 	key, err := generateSecretKey(true)
 	if err != nil {
 		log.Fatal(err)
@@ -113,7 +113,7 @@ func EncryptBytesGCM(plaintext []byte) ([]byte, []byte, error) {
 	return ciphertext, nonce, nil
 }
 
-func DecryptStringGCM(value string) string {
+func decryptStringGCM(value string) string {
 	key, err := generateSecretKey(false)
 	if err != nil {
 		log.Fatal(err)
@@ -143,7 +143,7 @@ func DecryptStringGCM(value string) string {
 	return string(plaintext)
 }
 
-func DecryptBytesGCM(ciphertext, nonce []byte) ([]byte, error) {
+func decryptBytesGCM(ciphertext, nonce []byte) ([]byte, error) {
 	key, err := generateSecretKey(true)
 	if err != nil {
 		log.Fatal(err)
