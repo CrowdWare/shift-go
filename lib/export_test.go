@@ -1,25 +1,18 @@
 package lib
 
 import (
-	"os"
 	"testing"
 	"time"
 )
 
 func TestGetTransactions(t *testing.T) {
-	account = Account{}
-	account.Transactions = append(account.Transactions, Transaction{Amount: 34})
-	account.Transactions = append(account.Transactions, Transaction{Amount: 34})
-	account.Transactions = append(account.Transactions, Transaction{Amount: 34})
-	list := GetTransactions()
+	account = _account{}
+	account.Transactions = append(account.Transactions, _transaction{Amount: 34, Date: time.Date(2023, 1, 28, 4, 2, 45, 0, time.Local), Typ: Lmp})
+	account.Transactions = append(account.Transactions, _transaction{Amount: 34, Date: time.Date(2023, 1, 28, 4, 2, 45, 0, time.Local), Typ: InitialBooking})
+	json := GetTransactions()
 
-	if len(list) != 3 {
-		t.Errorf("Expected len of 3 but got %d", len(list))
-	}
-	for _, trans := range list {
-		if trans.Amount != 34 {
-			t.Errorf("Expected amount of 34 but got %d", trans.Amount)
-		}
+	if json != "[{\"Amount\":34,\"Date\":1674874965,\"From\":\"\",\"Purpose\":\"\",\"Typ\":3},{\"Amount\":34,\"Date\":1674874965,\"From\":\"\",\"Purpose\":\"\",\"Typ\":1}]" {
+		t.Errorf("Not expected %s", json)
 	}
 }
 
@@ -65,10 +58,10 @@ func TestCalculateWorth(t *testing.T) {
 
 func TestAddTransaction(t *testing.T) {
 	Init("/tmp")
-	account = Account{}
+	account = _account{}
 	AddTransaction(10, "Purp", time.Now(), "fr", InitialBooking)
 	for i := 0; i < 31; i++ {
-		AddTransaction(10, "Purp", time.Now(), "fr", Scooping)
+		AddTransaction(10, "Purp", time.Now(), "fr", Scooped)
 	}
 	if len(account.Transactions) != 30 {
 		t.Errorf("Expected transaction length is 30 but got %d", len(account.Transactions))
@@ -89,30 +82,4 @@ func TestAddTransaction(t *testing.T) {
 	if account.Transactions[0].Typ != Subtotal {
 		t.Errorf("Exception typ to be Subtotal but got %d", account.Transactions[0].Typ)
 	}
-}
-
-func TestAddScooping(t *testing.T) {
-	Init("/tmp")
-
-	account = Account{Level_1_count: 10, Level_2_count: 98, Level_3_count: 786}
-	amount := calcGrowPer20Minutes()
-	if amount != 1691 {
-		t.Errorf("Expected 1691 but got %d", amount)
-	}
-	today := time.Now()
-	for i := 0; i < 24*3; i++ {
-		AddScooping(calcGrowPer20Minutes(), today)
-	}
-	today = today.AddDate(0, 0, 1)
-	AddScooping(calcGrowPer20Minutes(), today)
-	if len(account.Transactions) < 1 {
-		t.Error("Expected 1 row count but got 0")
-
-	} else {
-		amount := account.Transactions[0].Amount
-		if amount != 121 {
-			t.Errorf("Expected amount to be 12 but got %d", amount)
-		}
-	}
-	os.Remove("/tmp/shift.db")
 }

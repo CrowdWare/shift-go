@@ -33,7 +33,7 @@ const (
 	ServiceError   = 6
 )
 
-func CreateAccount(
+func createAccount(
 	name string,
 	uuid string,
 	ruuid string,
@@ -51,7 +51,7 @@ func CreateAccount(
 		return CountryMissing
 	}
 
-	account = Account{
+	account = _account{
 		Name:     strings.TrimSpace(name),
 		Uuid:     strings.TrimSpace(uuid),
 		Ruuid:    strings.TrimSpace(ruuid),
@@ -106,7 +106,7 @@ func CreateAccount(
 	}
 }
 
-func SetScooping(test bool) int {
+func setScooping(test bool) int {
 	client := http.Client{}
 	url := decryptStringGCM(servive_url_enc) + "setscooping"
 	jsonParams := make(map[string]interface{})
@@ -153,7 +153,7 @@ func SetScooping(test bool) int {
 	}
 }
 
-func GetMatelist(test bool) (int, []Friend) {
+func getMatelist(test bool) (int, []Friend) {
 	emptyList := make([]Friend, 0)
 	client := http.Client{}
 	url := decryptStringGCM(servive_url_enc) + "matelist"

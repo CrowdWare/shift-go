@@ -12,7 +12,7 @@ type TransactionType byte
 const (
 	Unknown        TransactionType = iota
 	InitialBooking                 = 1
-	Scooping                       = 2
+	Scooped                        = 2
 	Lmp                            = 3
 	Subtotal                       = 4
 )
@@ -25,7 +25,7 @@ type Friend struct {
 	FriendsCount int
 }
 
-type Account struct {
+type _account struct {
 	Name          string
 	Uuid          string
 	Ruuid         string
@@ -37,11 +37,11 @@ type Account struct {
 	Level_1_count int
 	Level_2_count int
 	Level_3_count int
-	Transactions  []Transaction
-	Scoopings     []Transaction
+	Transactions  []_transaction
+	Scoopings     []_transaction
 }
 
-type Transaction struct {
+type _transaction struct {
 	Amount  int64
 	Date    time.Time
 	From    string
@@ -92,4 +92,19 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func addScooping(amount int64, date time.Time) {
+	// when the last scooping has been added yesterday, then sum up the scooping and create a new transaction
+	len := len(account.Scoopings)
+	if len > 0 && account.Scoopings[len-1].Date.Day() != date.Day() {
+		milliLiter := int64(0)
+		for _, t := range account.Scoopings {
+			milliLiter += t.Amount
+		}
+		AddTransaction(milliLiter/1000, "", date, "", Scooped)
+		account.Scoopings = make([]_transaction, 0)
+	}
+	account.Scoopings = append(account.Scoopings, _transaction{Amount: amount, Date: date})
+	writeAccount()
 }

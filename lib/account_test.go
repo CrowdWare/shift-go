@@ -10,9 +10,9 @@ import (
 )
 
 func TestSerialize(t *testing.T) {
-	acc := Account{Name: "Hans", Language: "en", Scooping: time.Date(2023, 12, 23, 9, 0, 0, 0, time.Local)}
-	trans1 := Transaction{Amount: 13, Date: time.Date(2023, 3, 4, 0, 0, 0, 0, time.Local), Typ: Lmp}
-	trans2 := Transaction{Amount: 15, Date: time.Date(2021, 4, 2, 0, 0, 0, 0, time.Local), Typ: Lmp}
+	acc := _account{Name: "Hans", Language: "en", Scooping: time.Date(2023, 12, 23, 9, 0, 0, 0, time.Local)}
+	trans1 := _transaction{Amount: 13, Date: time.Date(2023, 3, 4, 0, 0, 0, 0, time.Local), Typ: Lmp}
+	trans2 := _transaction{Amount: 15, Date: time.Date(2021, 4, 2, 0, 0, 0, 0, time.Local), Typ: Lmp}
 	acc.Transactions = append(account.Transactions, trans1, trans2)
 	var buffer bytes.Buffer
 	acc.Name = "Bernd"
@@ -21,7 +21,7 @@ func TestSerialize(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	acc2 := Account{}
+	acc2 := _account{}
 	decoder := gob.NewDecoder(bytes.NewReader(buffer.Bytes()))
 	err = decoder.Decode(&acc2)
 	if err != nil {
@@ -39,7 +39,7 @@ func TestReadAccount(t *testing.T) {
 	if result != expected {
 		t.Errorf("Unexpected result. Got: %v, Expected: %v", result, expected)
 	}
-	account = Account{}
+	account = _account{}
 	writeAccount()
 
 	result = readAccount()
@@ -53,21 +53,47 @@ func TestReadAccount(t *testing.T) {
 
 func TestWriteReadAccount(t *testing.T) {
 	Init("/tmp")
-	account = Account{Name: "Hans", Language: "en", Scooping: time.Date(2023, 12, 23, 9, 0, 0, 0, time.Local)}
-	trans1 := Transaction{Amount: 13, Date: time.Date(2023, 3, 4, 0, 0, 0, 0, time.Local), Typ: Lmp}
-	trans2 := Transaction{Amount: 15, Date: time.Date(2021, 4, 2, 0, 0, 0, 0, time.Local), Typ: Lmp}
+	account = _account{Name: "Hans", Language: "en", Scooping: time.Date(2023, 12, 23, 9, 0, 0, 0, time.Local)}
+	trans1 := _transaction{Amount: 13, Date: time.Date(2023, 3, 4, 0, 0, 0, 0, time.Local), Typ: Lmp}
+	trans2 := _transaction{Amount: 15, Date: time.Date(2021, 4, 2, 0, 0, 0, 0, time.Local), Typ: Lmp}
 	account.Transactions = append(account.Transactions, trans1, trans2)
 	writeAccount()
 
-	tempAccount := Account{Name: "Hans", Language: "en", Scooping: time.Date(2023, 12, 23, 9, 0, 0, 0, time.Local)}
+	tempAccount := _account{Name: "Hans", Language: "en", Scooping: time.Date(2023, 12, 23, 9, 0, 0, 0, time.Local)}
 	tempAccount.Transactions = append(tempAccount.Transactions, trans1, trans2)
 
-	account = Account{}
+	account = _account{}
 	if readAccount() != true {
 		t.Error("Account could not be read")
 	}
 	if !reflect.DeepEqual(tempAccount, account) {
 		t.Errorf("Account mismatch:\nExpected: %v\nGot: %v", tempAccount, account)
+	}
+	os.Remove("/tmp/shift.db")
+}
+
+func TestAddScooping(t *testing.T) {
+	Init("/tmp")
+
+	account = _account{Level_1_count: 10, Level_2_count: 98, Level_3_count: 786}
+	amount := calcGrowPer20Minutes()
+	if amount != 1691 {
+		t.Errorf("Expected 1691 but got %d", amount)
+	}
+	today := time.Now()
+	for i := 0; i < 24*3; i++ {
+		addScooping(calcGrowPer20Minutes(), today)
+	}
+	today = today.AddDate(0, 0, 1)
+	addScooping(calcGrowPer20Minutes(), today)
+	if len(account.Transactions) < 1 {
+		t.Error("Expected 1 row count but got 0")
+
+	} else {
+		amount := account.Transactions[0].Amount
+		if amount != 121 {
+			t.Errorf("Expected amount to be 12 but got %d", amount)
+		}
 	}
 	os.Remove("/tmp/shift.db")
 }
