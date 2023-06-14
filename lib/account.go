@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/gob"
 	"log"
+	"math"
+	"strings"
 	"time"
 )
 
@@ -38,7 +40,6 @@ type _account struct {
 	Level_2_count int
 	Level_3_count int
 	Transactions  []_transaction
-	Scoopings     []_transaction
 }
 
 type _transaction struct {
@@ -47,6 +48,19 @@ type _transaction struct {
 	From    string
 	Purpose string
 	Typ     TransactionType
+}
+
+func addAccount(name, uuid, ruuid, country, language string, test bool) {
+	account = _account{
+		Name:     strings.TrimSpace(name),
+		Uuid:     strings.TrimSpace(uuid),
+		Ruuid:    strings.TrimSpace(ruuid),
+		Country:  country,
+		Language: language,
+	}
+	AddTransaction(10, "", time.Now(), "", InitialBooking)
+	writeAccount()
+	registerAccount(name, uuid, ruuid, country, language, test)
 }
 
 func readAccount() bool {
@@ -78,13 +92,21 @@ func writeAccount() {
 	}
 }
 
-func calcGrowPer20Minutes() int64 {
-	growPer20Minutes := int64(165) +
-		int64(min(account.Level_1_count, 10))*int64(25) +
-		int64(min(account.Level_2_count, 100))*int64(5) +
-		int64(min(account.Level_3_count, 1000))*int64(1)
+func calcGrowPerDay() int64 {
+	grow := int64(10_000) +
+		int64(min(account.Level_1_count, 10))*1800 +
+		int64(min(account.Level_2_count, 100))*360 +
+		int64(min(account.Level_3_count, 1000))*75
+	return grow / 1000
+}
 
-	return growPer20Minutes
+func calcGrowPerDiff(duration time.Duration) int64 {
+	hours := math.Min(20, duration.Hours())
+	grow := float64(10_000)/20*hours +
+		float64(min(account.Level_1_count, 10))*1800/20*hours +
+		float64(min(account.Level_2_count, 100))*360/20*hours +
+		float64(min(account.Level_3_count, 1000))*75/20*hours
+	return int64(grow)
 }
 
 func min(a, b int) int {
@@ -94,17 +116,15 @@ func min(a, b int) int {
 	return b
 }
 
-func addScooping(amount int64, date time.Time) {
-	// when the last scooping has been added yesterday, then sum up the scooping and create a new transaction
-	len := len(account.Scoopings)
-	if len > 0 && account.Scoopings[len-1].Date.Day() != date.Day() {
-		milliLiter := int64(0)
-		for _, t := range account.Scoopings {
-			milliLiter += t.Amount
-		}
-		AddTransaction(milliLiter/1000, "", date, "", Scooped)
-		account.Scoopings = make([]_transaction, 0)
+func checkScooping() bool {
+	if !account.IsScooping {
+		return false
 	}
-	account.Scoopings = append(account.Scoopings, _transaction{Amount: amount, Date: date})
-	writeAccount()
+	diff := time.Now().Sub(account.Scooping)
+	if diff.Hours() > 20 {
+		account.IsScooping = false
+		AddTransaction(calcGrowPerDay(), "", time.Now(), "", Scooped)
+		writeAccount()
+	}
+	return true
 }

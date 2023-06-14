@@ -1,6 +1,8 @@
 package lib
 
 import (
+	"encoding/json"
+	"log"
 	"testing"
 	"time"
 )
@@ -81,5 +83,55 @@ func TestAddTransaction(t *testing.T) {
 
 	if account.Transactions[0].Typ != Subtotal {
 		t.Errorf("Exception typ to be Subtotal but got %d", account.Transactions[0].Typ)
+	}
+}
+
+func TestGetScoopedBalance(t *testing.T) {
+	account.IsScooping = false
+	account.Level_1_count = 9
+	account.Level_2_count = 99
+	account.Level_3_count = 999
+	balance := GetScoopedBalance()
+	if balance != 0 {
+		t.Errorf("Expected balance is 0 but got %d", balance)
+	}
+	account.IsScooping = true
+	account.Scooping = time.Now().Add(time.Hour * -3)
+	balance = GetScoopedBalance()
+	if balance != 20514 {
+		t.Errorf("Expected balance is 20514 but got %d", balance)
+	}
+
+	account.Scooping = time.Now().Add(time.Second * -59)
+	balance = GetScoopedBalance()
+	if balance != 112 {
+		t.Errorf("Expected balance is 112 but got %d", balance)
+	}
+
+	account.Scooping = time.Now().Add(time.Hour * -20)
+	balance = GetScoopedBalance()
+	if balance != 136765 {
+		t.Errorf("Expected balance is 136765 but got %d", balance)
+	}
+}
+
+func TestGetProposalQRCode(t *testing.T) {
+	trans := _transaction{}
+	enc := GetProposalQRCode(13, "Massage")
+	plain := GetTransactionFromQRCode(enc)
+	err := json.Unmarshal([]byte(plain), &trans)
+	if err != nil {
+		log.Println(err)
+	}
+	if trans.Amount != 13 {
+		t.Errorf("Expected amount to be 13 but got %d", trans.Amount)
+	}
+
+	if trans.From != account.Name {
+		t.Errorf("Expected name to be %s but got %s", account.Name, trans.From)
+	}
+
+	if trans.Typ != Lmp {
+		t.Errorf("Expected typ to be LMP but got %d", trans.Typ)
 	}
 }

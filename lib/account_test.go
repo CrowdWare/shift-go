@@ -72,28 +72,49 @@ func TestWriteReadAccount(t *testing.T) {
 	os.Remove("/tmp/shift.db")
 }
 
-func TestAddScooping(t *testing.T) {
+func TestCheckScooping(t *testing.T) {
 	Init("/tmp")
-
-	account = _account{Level_1_count: 10, Level_2_count: 98, Level_3_count: 786}
-	amount := calcGrowPer20Minutes()
-	if amount != 1691 {
-		t.Errorf("Expected 1691 but got %d", amount)
+	account = _account{}
+	res := checkScooping()
+	if res != false {
+		t.Error("Expected scooping to be off")
 	}
-	today := time.Now()
-	for i := 0; i < 24*3; i++ {
-		addScooping(calcGrowPer20Minutes(), today)
-	}
-	today = today.AddDate(0, 0, 1)
-	addScooping(calcGrowPer20Minutes(), today)
-	if len(account.Transactions) < 1 {
-		t.Error("Expected 1 row count but got 0")
 
-	} else {
-		amount := account.Transactions[0].Amount
-		if amount != 121 {
-			t.Errorf("Expected amount to be 12 but got %d", amount)
-		}
+	account.IsScooping = true
+	account.Scooping = time.Now().Add(time.Hour * -20)
+	res = checkScooping()
+	if res != true {
+		t.Error("Expected scooping to be on")
+	}
+
+	if len(account.Transactions) != 1 {
+		t.Errorf("Expected transaction count to be 1 but got %d", len(account.Transactions))
+	}
+
+	account.IsScooping = true
+	account.Level_1_count = 9
+	account.Level_2_count = 99
+	account.Level_3_count = 999
+	account.Scooping = time.Now().Add(time.Hour * -20)
+	res = checkScooping()
+	if res != true {
+		t.Error("Expected scooping to be on")
+	}
+	if len(account.Transactions) != 2 {
+		t.Errorf("Expected transaction count to be 2 but got %d", len(account.Transactions))
+	}
+	balance := GetBalance()
+	if balance != 146 {
+		t.Errorf("Expected balance to be 136 + 10 but got %d", balance)
+	}
+	account.IsScooping = true
+	account.Scooping = time.Now().Add(time.Hour * -19)
+	res = checkScooping()
+	if res != true {
+		t.Error("Expected scooping to be on")
+	}
+	if len(account.Transactions) != 2 {
+		t.Errorf("Expected transaction count to be 2 but got %d", len(account.Transactions))
 	}
 	os.Remove("/tmp/shift.db")
 }

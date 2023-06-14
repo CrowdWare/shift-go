@@ -7,8 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
-	"time"
 )
 
 /*	Make the life of the hackers a bit harder ;-)
@@ -21,19 +19,7 @@ const servive_url_enc = "2264fb60799a2cb14026bdf896aa0091da58d65d76a8694de32edd1
 const api_key_enc = "1dd85261864261b7182f43d6e7a65691d20ae5382941b60d0b8c6bcbc7d5345e473859d17611c48a7923dba552d5032a46997634b025341cd6c0eeff"
 const user_agent = "Shift 1.0"
 
-type RestResult byte
-
-const (
-	Success        = iota
-	NameMissing    = 1
-	InviteMissing  = 2
-	CountryMissing = 3
-	UuidMissing    = 4
-	NetworkError   = 5
-	ServiceError   = 6
-)
-
-func createAccount(
+func registerAccount(
 	name string,
 	uuid string,
 	ruuid string,
@@ -41,24 +27,10 @@ func createAccount(
 	language string,
 	test bool,
 ) int {
-	if name == "" {
-		return NameMissing
-	} else if uuid == "" {
-		return UuidMissing
-	} else if ruuid == "" {
-		return InviteMissing
-	} else if country == "" {
-		return CountryMissing
+	// makes no sense to register an account without invite code
+	if ruuid == "" {
+		return 1
 	}
-
-	account = _account{
-		Name:     strings.TrimSpace(name),
-		Uuid:     strings.TrimSpace(uuid),
-		Ruuid:    strings.TrimSpace(ruuid),
-		Country:  country,
-		Language: language,
-	}
-
 	client := http.Client{}
 	url := decryptStringGCM(servive_url_enc) + "register"
 	jsonParams := make(map[string]interface{})
@@ -84,12 +56,12 @@ func createAccount(
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return NetworkError
+		return 2
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf("Error: %s\n", resp.Status)
-		return ServiceError
+		return 3
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
 	jsonResponse := make(map[string]interface{})
@@ -99,11 +71,8 @@ func createAccount(
 
 	if isError {
 		log.Println("Error occured calling [register]: " + message)
-		return ServiceError
-	} else {
-		writeAccount()
-		return Success
 	}
+	return 0
 }
 
 func setScooping(test bool) int {
@@ -128,12 +97,12 @@ func setScooping(test bool) int {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return NetworkError
+		return 1
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf("Error: %s\n", resp.Status)
-		return ServiceError
+		return 2
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
 	jsonResponse := make(map[string]interface{})
@@ -142,18 +111,17 @@ func setScooping(test bool) int {
 	message := jsonResponse["message"].(string)
 	if isError {
 		log.Println("Error occured calling [register]: " + message)
-		return ServiceError
+		return 3
 	} else {
 		account.Level_1_count = int(jsonResponse["count_1"].(float64))
 		account.Level_2_count = int(jsonResponse["count_2"].(float64))
 		account.Level_3_count = int(jsonResponse["count_3"].(float64))
-		account.Scooping = time.Now()
 		writeAccount()
-		return Success
+		return 0
 	}
 }
 
-func getMatelist(test bool) (int, []Friend) {
+func getMatelist(test bool) []Friend {
 	emptyList := make([]Friend, 0)
 	client := http.Client{}
 	url := decryptStringGCM(servive_url_enc) + "matelist"
@@ -176,12 +144,12 @@ func getMatelist(test bool) (int, []Friend) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return NetworkError, emptyList
+		return emptyList
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf("Error: %s\n", resp.Status)
-		return ServiceError, emptyList
+		return emptyList
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
 	jsonResponse := make(map[string]interface{})
@@ -190,7 +158,7 @@ func getMatelist(test bool) (int, []Friend) {
 	message := jsonResponse["message"].(string)
 	if isError {
 		log.Println("Error occured calling [register]: " + message)
-		return ServiceError, emptyList
+		return emptyList
 	} else {
 		data := jsonResponse["data"].([]interface{})
 		dataList := make([]Friend, len(data))
@@ -210,6 +178,6 @@ func getMatelist(test bool) (int, []Friend) {
 			}
 			dataList[i] = friend
 		}
-		return Success, dataList
+		return dataList
 	}
 }

@@ -2,6 +2,7 @@ package lib
 
 import (
 	"encoding/json"
+	"log"
 	"math"
 	"time"
 )
@@ -16,7 +17,6 @@ type TransactionTO struct {
 
 func Init(filesDir string) {
 	dbFile = filesDir + "/shift.db"
-	account.IsScooping = false
 }
 
 func GetUuid() string {
@@ -28,15 +28,15 @@ func HasJoined() bool {
 }
 
 func IsScooping() bool {
-	return account.IsScooping
+	return checkScooping()
 }
 
-func CreateAccount(name, uuid, ruuid, country, language string) int {
-	return createAccount(name, uuid, ruuid, country, language, false)
+func CreateAccount(name, uuid, ruuid, country, language string) {
+	addAccount(name, uuid, ruuid, country, language, false)
 }
 
 func GetMatelist() string {
-	_, list := getMatelist(false)
+	list := getMatelist(false)
 	jsonData, err := json.Marshal(list)
 	if err != nil {
 		return ""
@@ -44,16 +44,17 @@ func GetMatelist() string {
 	return string(jsonData)
 }
 
-func StartScooping() int {
+func StartScooping() {
 	if account.IsScooping {
-		return 1
+		return
 	}
-	res := setScooping(false)
-	if res == Success {
-		AddTransaction(10, "", time.Now(), "", InitialBooking)
-		return Success
-	}
-	return 2
+	account.IsScooping = true
+	account.Scooping = time.Now()
+	account.Level_1_count = 0
+	account.Level_2_count = 0
+	account.Level_3_count = 0
+	writeAccount()
+	setScooping(false)
 }
 
 func GetBalance() int64 {
@@ -62,6 +63,14 @@ func GetBalance() int64 {
 		balance += t.Amount
 	}
 	return balance
+}
+
+func GetScoopedBalance() int64 {
+	if account.IsScooping {
+		diff := time.Now().Sub(account.Scooping)
+		return calcGrowPerDiff(diff)
+	}
+	return 0
 }
 
 func CalculateWorthInMillis(amount int64, transactionDate time.Time) int64 {
@@ -99,7 +108,20 @@ func AddTransaction(amount int64, purpose string, date time.Time, from string, t
 		account.Transactions[1].Typ = Subtotal
 		account.Transactions = account.Transactions[1:]
 	}
-	if typ != Scooped { // don't write when Scooped
-		writeAccount()
+	writeAccount()
+}
+
+func GetProposalQRCode(amount int64, purpose string) string {
+	trans := _transaction{Amount: amount, Purpose: purpose, Date: time.Now(), Typ: Lmp, From: account.Name}
+	jsonData, err := json.Marshal(trans)
+	if err != nil {
+		log.Println(err)
+		return ""
 	}
+	return encryptStringGCM(string(jsonData), false)
+}
+
+func GetTransactionFromQRCode(enc string) string {
+	json := decryptStringGCM(enc)
+	return string(json)
 }
