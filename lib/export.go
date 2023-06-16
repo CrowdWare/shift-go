@@ -143,6 +143,10 @@ func AcceptProposal() string {
 	if err != nil {
 		return err.Error()
 	}
+	if lastTransaction.Purpose == "" {
+		log.Println("AcceptProposal no purpose")
+		return "NO_PURPOSE"
+	}
 	return "ok"
 }
 
@@ -157,6 +161,10 @@ func GetProposalQRCode(amount int64, purpose string) string {
 		log.Println(err)
 		return ""
 	}
+	if purpose == "" {
+		log.Println("GetProposalQRCode no purpose")
+		return "NO_PURPOSE"
+	}
 	return encryptStringGCM(string(jsonData), false)
 }
 
@@ -170,6 +178,10 @@ func GetAgreementQRCode() string {
 	if err != nil {
 		log.Println(err)
 		return ""
+	}
+	if lastTransaction.Purpose == "" {
+		log.Println("GetAgreementQRCode no purpose")
+		return "NO_PURPOSE"
 	}
 	return encryptStringGCM(string(jsonData), false)
 }
@@ -198,6 +210,10 @@ func GetProposalFromQRCode(enc string) string {
 		log.Println("BookTransaction: amount > 0")
 		return "FRAUD"
 	}
+	if lastTransaction.Purpose == "" {
+		log.Println("GetProposalFromQRCode no purpose")
+		return "NO_PURPOSE"
+	}
 	return string(jsonData)
 }
 
@@ -208,29 +224,33 @@ func GetProposalFromQRCode(enc string) string {
 func GetAgreementFromQRCode(enc string) string {
 	jsonData, err := decryptStringGCM(enc)
 	if err != nil {
-		log.Println("BookTransaction: error decrypting transaction")
+		log.Println("GetAgreementFromQRCode: error decrypting transaction")
 		return "FRAUD"
 	}
 	err = json.Unmarshal([]byte(jsonData), &lastTransaction)
 	if err != nil {
-		log.Println("BookTransaction: error unmarshaling transaction")
+		log.Println("GetAgreementFromQRCode: error unmarshaling transaction")
 		return "FRAUD"
 	}
 	if lastTransaction.Typ != Lmr {
-		log.Println("BookTransaction: wrong transaction typ")
+		log.Println("GetAgreementFromQRCode: wrong transaction typ")
 		return "FRAUD"
 	}
 	if lastTransaction.Amount < 1 {
-		log.Println("BookTransaction: error amount < 1")
-		return "FRAUD"
+		log.Println("GetAgreementFromQRCode: error amount < 1")
+		return "WRONG_TYP"
 	}
 	if lastTransaction.Uuid != account.Uuid {
-		log.Println("BookTransaction: error transaction not for this user")
+		log.Println("GetAgreementFromQRCode: error transaction not for this user")
 		return "FRAUD"
 	}
 	if transactionExists(lastTransaction) {
-		log.Println("BookTransaction: transaction already booked")
+		log.Println("GetAgreementFromQRCode: transaction already booked")
 		return "DOUBLE_SPENT"
+	}
+	if lastTransaction.Purpose == "" {
+		log.Println("GetAgreementFromQRCode no purpose")
+		return "NO_PURPOSE"
 	}
 	// only check error on withdraw, not on receive
 	addTransaction(lastTransaction.Amount, lastTransaction.Purpose, lastTransaction.Date, lastTransaction.From, lastTransaction.Typ, lastTransaction.Uuid)

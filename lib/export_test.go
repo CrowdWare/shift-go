@@ -151,7 +151,7 @@ func TestAcceptProposal(t *testing.T) {
 	Init("/tmp")
 	account = _account{}
 	addTransaction(10, "", time.Now(), "", InitialBooking, "")
-	enc := GetProposalQRCode(5, "")
+	enc := GetProposalQRCode(5, "Purpose")
 	plain := GetProposalFromQRCode(enc)
 	if plain == "FRAUD" {
 		t.Error("Expected to get a valid json code but got FRAUD")
@@ -165,7 +165,7 @@ func TestAcceptProposal(t *testing.T) {
 		t.Errorf("Expected to get a balance of 5000 but got %d", balance)
 	}
 
-	enc = GetProposalQRCode(15, "")
+	enc = GetProposalQRCode(15, "Purpose")
 	plain = GetProposalFromQRCode(enc)
 	if plain == "FRAUD" {
 		t.Error("Expected to get a valid json code but got FRAUD")
@@ -201,6 +201,27 @@ func TestGetAgreementQRCode(t *testing.T) {
 	}
 	if account.Transactions[0].Purpose != "Purpose" {
 		t.Errorf("Expected purpose to be Purpose but got %s", account.Transactions[0].Purpose)
+	}
+	os.Remove("/tmp/shift.db")
+}
+
+func TestFullTransaction(t *testing.T) {
+	Init("/tmp")
+	account = _account{}
+	addTransaction(20, "", time.Now(), "", InitialBooking, "")
+	enc := GetProposalQRCode(13, "Massage")
+	GetProposalFromQRCode(enc)
+	AcceptProposal()
+	enc = GetAgreementQRCode()
+	GetAgreementFromQRCode(enc)
+	if len(account.Transactions) != 3 {
+		t.Errorf("Expected 3 transaction but got %d", len(account.Transactions))
+	}
+	if account.Transactions[2].Amount != 13 {
+		t.Errorf("Expected amount to be 13 but got %d", account.Transactions[2].Amount)
+	}
+	if account.Transactions[2].Purpose != "Massage" {
+		t.Errorf("Expected pursose to be Massage but got %s", account.Transactions[2].Purpose)
 	}
 	os.Remove("/tmp/shift.db")
 }
