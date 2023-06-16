@@ -15,8 +15,9 @@ const (
 	Unknown        TransactionType = iota
 	InitialBooking                 = 1
 	Scooped                        = 2
-	Lmp                            = 3
-	Subtotal                       = 4
+	Lmp                            = 3 // liquid micro payment
+	Lmr                            = 4 // liquid micro receive
+	Subtotal                       = 5
 )
 
 type Friend struct {
@@ -48,6 +49,7 @@ type _transaction struct {
 	From    string
 	Purpose string
 	Typ     TransactionType
+	Uuid    string // receiver uuid
 }
 
 func addAccount(name, uuid, ruuid, country, language string, test bool) {
@@ -58,9 +60,28 @@ func addAccount(name, uuid, ruuid, country, language string, test bool) {
 		Country:  country,
 		Language: language,
 	}
-	AddTransaction(10, "", time.Now(), "", InitialBooking)
+	addTransaction(10, "", time.Now(), "", InitialBooking, "")
 	writeAccount()
 	registerAccount(name, uuid, ruuid, country, language, test)
+}
+
+func addTransaction(amount int64, purpose string, date time.Time, from string, typ TransactionType, uuid string) error {
+	balance := GetBalanceInMillis() / 1000
+	if balance+amount < 0 {
+		return &BalanceError{"Amount cannot be payed out, balance to low."}
+	}
+	account.Transactions = append(account.Transactions, _transaction{Amount: amount, Date: date, From: from, Purpose: purpose, Typ: typ, Uuid: uuid})
+	if len(account.Transactions) > 30 {
+		// create a subtotal and delete first transaction
+		account.Transactions[1].Amount += account.Transactions[0].Amount
+		account.Transactions[1].Purpose = ""
+		account.Transactions[1].From = ""
+		account.Transactions[1].Typ = Subtotal
+		account.Transactions[1].Uuid = ""
+		account.Transactions = account.Transactions[1:]
+	}
+	writeAccount()
+	return nil
 }
 
 func readAccount() bool {
@@ -123,8 +144,26 @@ func checkScooping() bool {
 	diff := time.Now().Sub(account.Scooping)
 	if diff.Hours() > 20 {
 		account.IsScooping = false
-		AddTransaction(calcGrowPerDay(), "", time.Now(), "", Scooped)
+		addTransaction(calcGrowPerDay(), "", time.Now(), "", Scooped, "")
 		writeAccount()
 	}
-	return true
+	return account.IsScooping
+}
+
+func calculateWorthInMillis(amount int64, transactionDate time.Time) int64 {
+	currentDate := time.Now()
+	daysPassed := int64(currentDate.Sub(transactionDate).Hours() / 24)
+	demurrageRate := 0.27 / 100
+	worth := int64(math.Pow(1-demurrageRate, float64(daysPassed)) * 1000)
+	worth *= amount
+	return worth
+}
+
+func transactionExists(trans _transaction) bool {
+	for _, t := range account.Transactions {
+		if t.Uuid == trans.Uuid && t.Date == trans.Date && t.From == lastTransaction.From {
+			return true
+		}
+	}
+	return false
 }

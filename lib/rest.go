@@ -32,14 +32,22 @@ func registerAccount(
 		return 1
 	}
 	client := http.Client{}
-	url := decryptStringGCM(servive_url_enc) + "register"
+	url, err := decryptStringGCM(servive_url_enc)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	jsonParams := make(map[string]interface{})
 	testValue := "false"
 	if test {
 		testValue = "true"
 	}
-	api_key := decryptStringGCM(api_key_enc)[:16]
-	jsonParams["key"] = encryptStringGCM(api_key, true)
+	api_key, err := decryptStringGCM(api_key_enc)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	jsonParams["key"] = encryptStringGCM(api_key[:16], true)
 	jsonParams["name"] = account.Name
 	jsonParams["uuid"] = account.Uuid
 	jsonParams["ruuid"] = account.Ruuid
@@ -50,7 +58,7 @@ func registerAccount(
 	jsonBytes, _ := json.Marshal(jsonParams)
 	entity := bytes.NewBuffer(jsonBytes)
 
-	req, _ := http.NewRequest("POST", url, entity)
+	req, _ := http.NewRequest("POST", url+"register", entity)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", user_agent)
 
@@ -77,21 +85,28 @@ func registerAccount(
 
 func setScooping(test bool) int {
 	client := http.Client{}
-	url := decryptStringGCM(servive_url_enc) + "setscooping"
+	url, err := decryptStringGCM(servive_url_enc)
+	if err != nil {
+		log.Fatal(err)
+	}
 	jsonParams := make(map[string]interface{})
 	testValue := "false"
 	if test {
 		testValue = "true"
 	}
-	api_key := decryptStringGCM(api_key_enc)[:16]
-	jsonParams["key"] = encryptStringGCM(api_key, true)
+	api_key, err := decryptStringGCM(api_key_enc)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	jsonParams["key"] = encryptStringGCM(api_key[:16], true)
 	jsonParams["uuid"] = account.Uuid
 	jsonParams["test"] = testValue
 
 	jsonBytes, _ := json.Marshal(jsonParams)
 	entity := bytes.NewBuffer(jsonBytes)
 
-	req, _ := http.NewRequest("POST", url, entity)
+	req, _ := http.NewRequest("POST", url+"setscooping", entity)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", user_agent)
 
@@ -124,21 +139,29 @@ func setScooping(test bool) int {
 func getMatelist(test bool) []Friend {
 	emptyList := make([]Friend, 0)
 	client := http.Client{}
-	url := decryptStringGCM(servive_url_enc) + "matelist"
+	url, err := decryptStringGCM(servive_url_enc)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	jsonParams := make(map[string]interface{})
 	testValue := "false"
 	if test {
 		testValue = "true"
 	}
-	api_key := decryptStringGCM(api_key_enc)[:16]
-	jsonParams["key"] = encryptStringGCM(api_key, true)
+	api_key, err := decryptStringGCM(api_key_enc)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	jsonParams["key"] = encryptStringGCM(api_key[:16], true)
 	jsonParams["uuid"] = account.Uuid
 	jsonParams["test"] = testValue
 
 	jsonBytes, _ := json.Marshal(jsonParams)
 	entity := bytes.NewBuffer(jsonBytes)
 
-	req, _ := http.NewRequest("POST", url, entity)
+	req, _ := http.NewRequest("POST", url+"matelist", entity)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", user_agent)
 

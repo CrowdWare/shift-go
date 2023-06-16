@@ -9,10 +9,13 @@ import (
 
 func TestStorj(t *testing.T) {
 	Init("/tmp")
-	initStorj(context.Background())
+	err := initStorj(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	uploadBuffer := []byte("one fish two fish red fish blue fish")
-	err := put("foo/bar/baz", uploadBuffer)
+	err = put("foo/bar/baz", uploadBuffer)
 	if err != nil {
 		log.Fatal(err)
 	}

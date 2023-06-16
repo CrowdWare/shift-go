@@ -83,8 +83,8 @@ func TestCheckScooping(t *testing.T) {
 	account.IsScooping = true
 	account.Scooping = time.Now().Add(time.Hour * -20)
 	res = checkScooping()
-	if res != true {
-		t.Error("Expected scooping to be on")
+	if res == true {
+		t.Error("Expected scooping to be off")
 	}
 
 	if len(account.Transactions) != 1 {
@@ -97,24 +97,36 @@ func TestCheckScooping(t *testing.T) {
 	account.Level_3_count = 999
 	account.Scooping = time.Now().Add(time.Hour * -20)
 	res = checkScooping()
-	if res != true {
-		t.Error("Expected scooping to be on")
+	if res == true {
+		t.Error("Expected scooping to be off")
 	}
 	if len(account.Transactions) != 2 {
 		t.Errorf("Expected transaction count to be 2 but got %d", len(account.Transactions))
 	}
-	balance := GetBalance()
-	if balance != 146 {
-		t.Errorf("Expected balance to be 136 + 10 but got %d", balance)
+	balance := GetBalanceInMillis()
+	if balance != 146000 {
+		t.Errorf("Expected balance to be 136000 + 10000 but got %d", balance)
 	}
 	account.IsScooping = true
 	account.Scooping = time.Now().Add(time.Hour * -19)
 	res = checkScooping()
-	if res != true {
+	if res == false {
 		t.Error("Expected scooping to be on")
 	}
 	if len(account.Transactions) != 2 {
 		t.Errorf("Expected transaction count to be 2 but got %d", len(account.Transactions))
 	}
 	os.Remove("/tmp/shift.db")
+}
+
+func TestTransactionExists(t *testing.T) {
+	account = _account{}
+	now := time.Now()
+	addTransaction(18, "", time.Now(), "", Lmr, "12345")
+	addTransaction(13, "", now, "", Lmr, "12345")
+	addTransaction(20, "", time.Now(), "", Lmr, "12345")
+	res := transactionExists(_transaction{Amount: 13, Date: now, Purpose: "", From: "", Uuid: "12345"})
+	if res == false {
+		t.Error("Not implemented yet")
+	}
 }

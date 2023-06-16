@@ -113,24 +113,28 @@ func encryptBytesGCM(plaintext []byte) ([]byte, []byte, error) {
 	return ciphertext, nonce, nil
 }
 
-func decryptStringGCM(value string) string {
+func decryptStringGCM(value string) (string, error) {
 	key, err := generateSecretKey(false)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return "", err
 	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return "", err
 	}
 
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return "", err
 	}
 
 	encryptedData, err := hex.DecodeString(value)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return "", err
 	}
 
 	iv := encryptedData[:12] // GCM IV is usually 12 bytes
@@ -138,9 +142,10 @@ func decryptStringGCM(value string) string {
 
 	plaintext, err := aesGCM.Open(nil, iv, cipherText, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return "", err
 	}
-	return string(plaintext)
+	return string(plaintext), nil
 }
 
 func decryptBytesGCM(ciphertext, nonce []byte) ([]byte, error) {

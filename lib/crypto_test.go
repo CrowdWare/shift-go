@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"log"
 	"os"
 	"testing"
 )
@@ -12,10 +13,24 @@ func TestEncryptDecrypt(t *testing.T) {
 	Init("")
 	teststring := "The quick brown fox"
 	enc := encryptStringGCM(teststring, false)
-	result := decryptStringGCM(enc)
+	result, err := decryptStringGCM(enc)
+	if err != nil {
+		log.Fatal(err)
+	}
 	expected := teststring
 	if result != expected || enc == teststring {
 		t.Errorf("Unexpected result. Got: %s, Expected: %s", result, expected)
+	}
+
+	result, err = decryptStringGCM(enc + "a")
+	if err == nil {
+		t.Error("Expected an error decrypting")
+	}
+	runes := []rune(enc)
+	runes[3] = 'a'
+	result, err = decryptStringGCM(string(runes))
+	if err == nil {
+		t.Error("Expected an error decrypting")
 	}
 }
 
