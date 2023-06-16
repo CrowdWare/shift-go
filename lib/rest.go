@@ -18,6 +18,7 @@ import (
 const servive_url_enc = "2264fb60799a2cb14026bdf896aa0091da58d65d76a8694de32edd1fffb9ae9566d39cd48d8dcfe5397ebcae2b183e2b8c94ee49b5fd185ff1318c"
 const api_key_enc = "1dd85261864261b7182f43d6e7a65691d20ae5382941b60d0b8c6bcbc7d5345e473859d17611c48a7923dba552d5032a46997634b025341cd6c0eeff"
 const user_agent = "Shift 1.0"
+const url = "http://128.140.48.116:8080/"
 
 func registerAccount(
 	name string,
@@ -32,10 +33,10 @@ func registerAccount(
 		return 1
 	}
 	client := http.Client{}
-	url, err := decryptStringGCM(servive_url_enc)
-	if err != nil {
-		log.Fatal(err)
-	}
+	//url, err := decryptStringGCM(servive_url_enc)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
 	jsonParams := make(map[string]interface{})
 	testValue := "false"
@@ -64,6 +65,7 @@ func registerAccount(
 
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Println("Error occured calling [register]: " + err.Error())
 		return 2
 	}
 	defer resp.Body.Close()
@@ -85,10 +87,10 @@ func registerAccount(
 
 func setScooping(test bool) int {
 	client := http.Client{}
-	url, err := decryptStringGCM(servive_url_enc)
-	if err != nil {
-		log.Fatal(err)
-	}
+	//url, err := decryptStringGCM(servive_url_enc)
+	//if err != nil {
+	//	log.Fatal(err)
+	//	}
 	jsonParams := make(map[string]interface{})
 	testValue := "false"
 	if test {
@@ -139,10 +141,10 @@ func setScooping(test bool) int {
 func getMatelist(test bool) []Friend {
 	emptyList := make([]Friend, 0)
 	client := http.Client{}
-	url, err := decryptStringGCM(servive_url_enc)
-	if err != nil {
-		log.Fatal(err)
-	}
+	//url, err := decryptStringGCM(servive_url_enc)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
 	jsonParams := make(map[string]interface{})
 	testValue := "false"

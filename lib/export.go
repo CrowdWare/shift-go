@@ -122,9 +122,6 @@ func GetTransactions() string {
 	if startIndex < 0 {
 		startIndex = 0
 	}
-	/*for _, t := range account.Transactions[startIndex:] {
-		trans = append(trans, TransactionTO{Amount: t.Amount, Purpose: t.Purpose, Date: t.Date.Unix(), From: t.From, Typ: int(t.Typ)})
-	}*/
 	for i := len(account.Transactions) - 1; i >= startIndex; i-- {
 		t := account.Transactions[i]
 		trans = append(trans, TransactionTO{Amount: t.Amount, Purpose: t.Purpose, Date: t.Date.Unix(), From: t.From, Typ: int(t.Typ)})
@@ -137,7 +134,7 @@ func GetTransactions() string {
 }
 
 /*
-**	When GetTransactionFromQRCode is called, then this transaction is stored temporary
+**	When GetProposalFromQRCode is called, then this transaction is stored temporary
 **  In this method we take the last transaction and withdraw it from the account.
 **  We don't want to have a public function for adding transactions.
  */
@@ -168,7 +165,7 @@ func GetProposalQRCode(amount int64, purpose string) string {
 **	On the client a QR code will be created based on that string.
  */
 func GetAgreementQRCode() string {
-	trans := _transaction{Amount: lastTransaction.Amount, Purpose: lastTransaction.Purpose, Date: time.Now(), Typ: Lmr, From: account.Name, Uuid: lastTransaction.Uuid}
+	trans := _transaction{Amount: lastTransaction.Amount * -1, Purpose: lastTransaction.Purpose, Date: time.Now(), Typ: Lmr, From: account.Name, Uuid: lastTransaction.Uuid}
 	jsonData, err := json.Marshal(trans)
 	if err != nil {
 		log.Println(err)
@@ -182,7 +179,7 @@ func GetAgreementQRCode() string {
 **	and send back the json to the client (we cannot send objects to Kotlin).
 **  If it cannot be decrypted or unpacked its a sign for an attack.
  */
-func GetTransactionFromQRCode(enc string) string {
+func GetProposalFromQRCode(enc string) string {
 	jsonData, err := decryptStringGCM(enc)
 	if err != nil {
 		log.Println("BookTransaction: error decrypting transaction")
@@ -208,7 +205,7 @@ func GetTransactionFromQRCode(enc string) string {
 **	We encrypt the QR-Code, unpack and validate the transaction and when
 **	everything is fine we book it.
  */
-func BookTransaction(enc string) string {
+func GetAgreementFromQRCode(enc string) string {
 	jsonData, err := decryptStringGCM(enc)
 	if err != nil {
 		log.Println("BookTransaction: error decrypting transaction")

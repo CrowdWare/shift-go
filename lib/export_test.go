@@ -129,7 +129,7 @@ func TestGetScoopedBalance(t *testing.T) {
 func TestGetProposalQRCode(t *testing.T) {
 	trans := _transaction{}
 	enc := GetProposalQRCode(13, "Massage")
-	plain := GetTransactionFromQRCode(enc)
+	plain := GetProposalFromQRCode(enc)
 	err := json.Unmarshal([]byte(plain), &trans)
 	if err != nil {
 		log.Println(err)
@@ -152,7 +152,7 @@ func TestAcceptProposal(t *testing.T) {
 	account = _account{}
 	addTransaction(10, "", time.Now(), "", InitialBooking, "")
 	enc := GetProposalQRCode(5, "")
-	plain := GetTransactionFromQRCode(enc)
+	plain := GetProposalFromQRCode(enc)
 	if plain == "FRAUD" {
 		t.Error("Expected to get a valid json code but got FRAUD")
 	}
@@ -166,7 +166,7 @@ func TestAcceptProposal(t *testing.T) {
 	}
 
 	enc = GetProposalQRCode(15, "")
-	plain = GetTransactionFromQRCode(enc)
+	plain = GetProposalFromQRCode(enc)
 	if plain == "FRAUD" {
 		t.Error("Expected to get a valid json code but got FRAUD")
 	}
@@ -179,11 +179,11 @@ func TestAcceptProposal(t *testing.T) {
 func TestGetAgreementQRCode(t *testing.T) {
 	Init("/tmp")
 	account = _account{}
-	lastTransaction.Amount = 13
-	lastTransaction.Purpose = ""
+	lastTransaction.Amount = -13
+	lastTransaction.Purpose = "Purpose"
 	lastTransaction.Uuid = account.Uuid
 	enc := GetAgreementQRCode()
-	res := BookTransaction(enc)
+	res := GetAgreementFromQRCode(enc)
 	if res != "ok" {
 		t.Errorf("Expected result ok but got %s", res)
 		return
@@ -198,6 +198,9 @@ func TestGetAgreementQRCode(t *testing.T) {
 
 	if account.Transactions[0].Typ != Lmr {
 		t.Errorf("Expected typ to be LMR but got %d", account.Transactions[0].Typ)
+	}
+	if account.Transactions[0].Purpose != "Purpose" {
+		t.Errorf("Expected purpose to be Purpose but got %s", account.Transactions[0].Purpose)
 	}
 	os.Remove("/tmp/shift.db")
 }
