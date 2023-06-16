@@ -126,6 +126,15 @@ func TestGetScoopedBalance(t *testing.T) {
 	}
 }
 
+func TestGetScoopedHours(t *testing.T) {
+	account.Scooping = time.Now().Add(time.Minute * -150)
+	account.IsScooping = true
+	res := int64(GetScoopingHours() * 10)
+	if res != 25 {
+		t.Errorf("Expected 25 but got %d", res)
+	}
+}
+
 func TestGetProposalQRCode(t *testing.T) {
 	trans := _transaction{}
 	enc := GetProposalQRCode(13, "Massage")

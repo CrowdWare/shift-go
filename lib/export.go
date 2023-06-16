@@ -114,6 +114,17 @@ func GetScoopedBalance() int64 {
 }
 
 /*
+**	Returns the amount of hours the account is scooping
+ */
+func GetScoopingHours() float64 {
+	if account.IsScooping {
+		diff := time.Now().Sub(account.Scooping)
+		return diff.Hours()
+	}
+	return 0
+}
+
+/*
 **	Get a list of the last 30 transactions, pack it into a json string and return it.
  */
 func GetTransactions() string {
