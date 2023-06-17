@@ -7,6 +7,8 @@ import (
 	"math"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type TransactionType byte
@@ -44,6 +46,7 @@ type _account struct {
 }
 
 type _transaction struct {
+	Pkey    string
 	Amount  int64
 	Date    time.Time
 	From    string
@@ -52,27 +55,28 @@ type _transaction struct {
 	Uuid    string // receiver uuid
 }
 
-func addAccount(name, uuid, ruuid, country, language string, test bool) {
+func addAccount(name, _uuid, ruuid, country, language string, test bool) {
 	account = _account{
 		Name:     strings.TrimSpace(name),
-		Uuid:     strings.TrimSpace(uuid),
+		Uuid:     strings.TrimSpace(_uuid),
 		Ruuid:    strings.TrimSpace(ruuid),
 		Country:  country,
 		Language: language,
 	}
-	addTransaction(10, "", time.Now(), "", InitialBooking, "")
+	addTransaction(uuid.New().String(), 10, "", time.Now(), "", InitialBooking, "")
 	writeAccount()
-	registerAccount(name, uuid, ruuid, country, language, test)
+	registerAccount(name, _uuid, ruuid, country, language, test)
 }
 
-func addTransaction(amount int64, purpose string, date time.Time, from string, typ TransactionType, uuid string) error {
+func addTransaction(pkey string, amount int64, purpose string, date time.Time, from string, typ TransactionType, _uuid string) error {
 	balance := GetBalanceInMillis() / 1000
 	if balance+amount < 0 {
 		return &BalanceError{"Amount cannot be payed out, balance to low."}
 	}
-	account.Transactions = append(account.Transactions, _transaction{Amount: amount, Date: date, From: from, Purpose: purpose, Typ: typ, Uuid: uuid})
+	account.Transactions = append(account.Transactions, _transaction{Pkey: pkey, Amount: amount, Date: date, From: from, Purpose: purpose, Typ: typ, Uuid: _uuid})
 	if len(account.Transactions) > 30 {
 		// create a subtotal and delete first transaction
+		account.Transactions[1].Pkey = uuid.New().String()
 		account.Transactions[1].Amount += account.Transactions[0].Amount
 		account.Transactions[1].Purpose = ""
 		account.Transactions[1].From = ""
@@ -88,6 +92,7 @@ func readAccount() bool {
 	if fileExists(dbFile) {
 		buffer, err := readFile(dbFile)
 		if err != nil {
+			log.Println("Error reading file " + dbFile)
 			log.Fatal(err)
 		}
 		decoder := gob.NewDecoder(bytes.NewReader(buffer))
@@ -144,7 +149,7 @@ func checkScooping() bool {
 	diff := time.Now().Sub(account.Scooping)
 	if diff.Hours() > 20 {
 		account.IsScooping = false
-		addTransaction(calcGrowPerDay(), "", time.Now(), "", Scooped, "")
+		addTransaction(uuid.New().String(), calcGrowPerDay(), "", time.Now(), "", Scooped, "")
 		writeAccount()
 	}
 	return account.IsScooping
@@ -159,9 +164,9 @@ func calculateWorthInMillis(amount int64, transactionDate time.Time) int64 {
 	return worth
 }
 
-func transactionExists(trans _transaction) bool {
+func transactionExists(pkey string) bool {
 	for _, t := range account.Transactions {
-		if t.Uuid == trans.Uuid && t.Date == trans.Date && t.From == lastTransaction.From {
+		if t.Pkey == pkey {
 			return true
 		}
 	}

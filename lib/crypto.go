@@ -10,20 +10,15 @@ import (
 	"time"
 )
 
-func generateSecretKey(db bool) ([]byte, error) {
+func generateSecretKey(db bool, read bool) ([]byte, error) {
 	// Declare the variables used for key derivation
 	var value3 int
-	var empty []byte
 
 	// Check if the file exists
 	if db {
-		if fileInfo, err := os.Stat(dbFile); os.IsNotExist(err) {
-			// Use the current date as a fallback value
-			value3 = time.Now().Day()
-		} else if err != nil {
-			return empty, err
-		} else {
-			// Retrieve the file's modification time
+		value3 = time.Now().Day()
+		fileInfo, err := os.Stat(dbFile)
+		if read && err == nil {
 			modTime := fileInfo.ModTime()
 			value3 = modTime.Day()
 		}
@@ -63,7 +58,7 @@ func encryptStringGCM(value string, webservice bool) string {
 	if webservice {
 		key = []byte("1234567890123456")
 	} else {
-		key, err = generateSecretKey(false)
+		key, err = generateSecretKey(false, false)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -89,7 +84,7 @@ func encryptStringGCM(value string, webservice bool) string {
 }
 
 func encryptBytesGCM(plaintext []byte) ([]byte, []byte, error) {
-	key, err := generateSecretKey(true)
+	key, err := generateSecretKey(true, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -114,26 +109,22 @@ func encryptBytesGCM(plaintext []byte) ([]byte, []byte, error) {
 }
 
 func decryptStringGCM(value string) (string, error) {
-	key, err := generateSecretKey(false)
+	key, err := generateSecretKey(false, false)
 	if err != nil {
-		log.Println(err)
 		return "", err
 	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		log.Println(err)
 		return "", err
 	}
 
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		log.Println(err)
 		return "", err
 	}
 
 	encryptedData, err := hex.DecodeString(value)
 	if err != nil {
-		log.Println(err)
 		return "", err
 	}
 
@@ -142,14 +133,13 @@ func decryptStringGCM(value string) (string, error) {
 
 	plaintext, err := aesGCM.Open(nil, iv, cipherText, nil)
 	if err != nil {
-		log.Println(err)
 		return "", err
 	}
 	return string(plaintext), nil
 }
 
 func decryptBytesGCM(ciphertext, nonce []byte) ([]byte, error) {
-	key, err := generateSecretKey(true)
+	key, err := generateSecretKey(true, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -163,10 +153,10 @@ func decryptBytesGCM(ciphertext, nonce []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
+	plainbytes, err := aesGCM.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return plaintext, nil
+	return plainbytes, nil
 }

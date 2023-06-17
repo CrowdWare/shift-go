@@ -17,6 +17,7 @@ func fileExists(filePath string) bool {
 }
 
 func writeFile(filename string, content []byte) error {
+	tempFilePath := filename + ".temp"
 	ciphertext, nonce, err := encryptBytesGCM(content)
 	if err != nil {
 		return err
@@ -26,7 +27,25 @@ func writeFile(filename string, content []byte) error {
 	contentWithNonce := append(nonce, ciphertext...)
 
 	// Write the encrypted content with nonce to a file
-	if err := ioutil.WriteFile(filename, contentWithNonce, 0644); err != nil {
+	if err := ioutil.WriteFile(tempFilePath, contentWithNonce, 0644); err != nil {
+		return err
+	}
+
+	// Sync the file to ensure data is written to disk
+	file, err := os.OpenFile(tempFilePath, os.O_WRONLY, 0)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	err = file.Sync()
+	if err != nil {
+		return err
+	}
+
+	// Replace the original file with the decrypted file
+	err = os.Rename(tempFilePath, filename)
+	if err != nil {
 		return err
 	}
 
@@ -43,10 +62,10 @@ func readFile(filename string) ([]byte, error) {
 	nonce := contentWithNonce[:12]
 	ciphertext := contentWithNonce[12:]
 
-	plaintext, err := decryptBytesGCM(ciphertext, nonce)
+	plainbytes, err := decryptBytesGCM(ciphertext, nonce)
 	if err != nil {
 		return nil, err
 	}
 
-	return plaintext, nil
+	return plainbytes, nil
 }

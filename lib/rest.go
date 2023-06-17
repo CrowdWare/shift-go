@@ -3,7 +3,6 @@ package lib
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -70,7 +69,7 @@ func registerAccount(
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Error: %s\n", resp.Status)
+		log.Printf("Error: %s\n", resp.Status)
 		return 3
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -118,7 +117,7 @@ func setScooping(test bool) int {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Error: %s\n", resp.Status)
+		log.Printf("Error: %s\n", resp.Status)
 		return 2
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -173,7 +172,7 @@ func getMatelist(test bool) []Friend {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Error: %s\n", resp.Status)
+		log.Printf("Error: %s\n", resp.Status)
 		return emptyList
 	}
 	body, _ := ioutil.ReadAll(resp.Body)

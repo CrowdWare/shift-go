@@ -10,21 +10,20 @@ import (
 
 func TestGetTransactions(t *testing.T) {
 	account = _account{}
-	account.Transactions = append(account.Transactions, _transaction{Amount: 34, Date: time.Date(2023, 1, 28, 4, 2, 45, 0, time.Local), Typ: InitialBooking})
-	account.Transactions = append(account.Transactions, _transaction{Amount: 34, Date: time.Date(2023, 1, 28, 4, 2, 45, 0, time.Local), Typ: Lmp})
+	account.Transactions = append(account.Transactions, _transaction{Pkey: "", Amount: 34, Date: time.Date(2023, 1, 28, 4, 2, 45, 0, time.Local), Typ: InitialBooking})
+	account.Transactions = append(account.Transactions, _transaction{Pkey: "", Amount: 34, Date: time.Date(2023, 1, 28, 4, 2, 45, 0, time.Local), Typ: Lmp})
 	json := GetTransactions()
 
-	if json != "[{\"Amount\":34,\"Date\":1674874965,\"From\":\"\",\"Purpose\":\"\",\"Typ\":3},{\"Amount\":34,\"Date\":1674874965,\"From\":\"\",\"Purpose\":\"\",\"Typ\":1}]" {
+	if json != "[{\"Pkey\":\"\",\"Amount\":34,\"Date\":1674874965,\"From\":\"\",\"Purpose\":\"\",\"Typ\":3},{\"Pkey\":\"\",\"Amount\":34,\"Date\":1674874965,\"From\":\"\",\"Purpose\":\"\",\"Typ\":1}]" {
 		t.Errorf("Not expected %s", json)
 	}
 
 	for i := 0; i < 30; i++ {
-		account.Transactions = append(account.Transactions, _transaction{Amount: 20, Date: time.Date(2023, 1, 28, 4, 2, 45, 0, time.Local), Typ: Lmp})
+		account.Transactions = append(account.Transactions, _transaction{Pkey: "", Amount: 20, Date: time.Date(2023, 1, 28, 4, 2, 45, 0, time.Local), Typ: Lmp})
 	}
 	json = GetTransactions()
-	log.Println(json)
-	if len(json) != 1891 {
-		t.Errorf("Expected len to be 1891 but got %d", len(json))
+	if len(json) != 2191 {
+		t.Errorf("Expected len to be 2191 but got %d", len(json))
 	}
 }
 
@@ -71,9 +70,9 @@ func TestCalculateWorth(t *testing.T) {
 func TestAddTransaction(t *testing.T) {
 	Init("/tmp")
 	account = _account{}
-	addTransaction(10, "Purp", time.Now(), "fr", InitialBooking, "")
+	addTransaction("", 10, "Purp", time.Now(), "fr", InitialBooking, "")
 	for i := 0; i < 31; i++ {
-		addTransaction(10, "Purp", time.Now(), "fr", Scooped, "")
+		addTransaction("pkey", 10, "Purp", time.Now(), "fr", Scooped, "")
 	}
 	if len(account.Transactions) != 30 {
 		t.Errorf("Expected transaction length is 30 but got %d", len(account.Transactions))
@@ -84,7 +83,7 @@ func TestAddTransaction(t *testing.T) {
 		t.Errorf("Expected balance is 320000 but got %d", balance)
 	}
 
-	addTransaction(34, "Purp", time.Now(), "ssd", Lmp, "")
+	addTransaction("", 34, "Purp", time.Now(), "ssd", Lmp, "")
 
 	balance = GetBalanceInMillis()
 	if balance != 354000 {
@@ -159,7 +158,7 @@ func TestGetProposalQRCode(t *testing.T) {
 func TestAcceptProposal(t *testing.T) {
 	Init("/tmp")
 	account = _account{}
-	addTransaction(10, "", time.Now(), "", InitialBooking, "")
+	addTransaction("pkey", 10, "", time.Now(), "", InitialBooking, "")
 	enc := GetProposalQRCode(5, "Purpose")
 	plain := GetProposalFromQRCode(enc)
 	if plain == "FRAUD" {
@@ -217,10 +216,11 @@ func TestGetAgreementQRCode(t *testing.T) {
 func TestFullTransaction(t *testing.T) {
 	Init("/tmp")
 	account = _account{}
-	addTransaction(20, "", time.Now(), "", InitialBooking, "")
+	addTransaction("pkey", 20, "", time.Now(), "", InitialBooking, "")
 	enc := GetProposalQRCode(13, "Massage")
 	GetProposalFromQRCode(enc)
 	AcceptProposal()
+	account.Transactions[1].Pkey = "pkey2"
 	enc = GetAgreementQRCode()
 	GetAgreementFromQRCode(enc)
 	if len(account.Transactions) != 3 {
@@ -231,6 +231,34 @@ func TestFullTransaction(t *testing.T) {
 	}
 	if account.Transactions[2].Purpose != "Massage" {
 		t.Errorf("Expected pursose to be Massage but got %s", account.Transactions[2].Purpose)
+	}
+	os.Remove("/tmp/shift.db")
+}
+
+func TestGetAgreementQRCodeForTransaction(t *testing.T) {
+	now := time.Now()
+	Init("/tmp")
+	account = _account{}
+	addTransaction("pkey", 20, "", now, "", InitialBooking, "")
+	enc := GetProposalQRCode(13, "Massage")
+	GetProposalFromQRCode(enc)
+	AcceptProposal()
+	enc = GetAgreementQRCode()
+	res := GetAgreementFromQRCode(enc)
+	enc2 := GetAgreementQRCodeForTransaction(account.Transactions[1].Pkey)
+	res2 := GetAgreementFromQRCode(enc2)
+
+	if res != res2 {
+		t.Errorf("Expected two eqal jsons but got %s anf %s", res, res2)
+	}
+	account.Transactions[1].Typ = Scooped
+	enc2 = GetAgreementQRCodeForTransaction(account.Transactions[1].Pkey)
+	if enc2 != "NOT LMP" {
+		t.Errorf("Expected NOT LMP but got %s", enc2)
+	}
+	enc2 = GetAgreementQRCodeForTransaction("invalid")
+	if enc2 != "NOT FOUND" {
+		t.Errorf("Expected NOT FOUND but got %s", enc2)
 	}
 	os.Remove("/tmp/shift.db")
 }

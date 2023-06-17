@@ -122,10 +122,10 @@ func TestCheckScooping(t *testing.T) {
 func TestTransactionExists(t *testing.T) {
 	account = _account{}
 	now := time.Now()
-	addTransaction(18, "", time.Now(), "", Lmr, "12345")
-	addTransaction(13, "", now, "", Lmr, "12345")
-	addTransaction(20, "", time.Now(), "", Lmr, "12345")
-	res := transactionExists(_transaction{Amount: 13, Date: now, Purpose: "", From: "", Uuid: "12345"})
+	addTransaction("pkey", 18, "", time.Now(), "", Lmr, "12345")
+	addTransaction("", 13, "", now, "", Lmr, "12345")
+	addTransaction("", 20, "", time.Now(), "", Lmr, "12345")
+	res := transactionExists("pkey")
 	if res == false {
 		t.Error("Not implemented yet")
 	}

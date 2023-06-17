@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"log"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 /*
 **	This is needed to create a json string to be sent to the client.
  */
 type TransactionTO struct {
+	Pkey    string
 	Amount  int64
 	Date    int64
 	From    string
@@ -29,6 +32,21 @@ func Init(filesDir string) {
  */
 func GetUuid() string {
 	return account.Uuid
+}
+
+/*
+**	Return the account Name
+ */
+func GetName() string {
+	return account.Name
+}
+
+/*
+**	Set the account Name
+ */
+func SetName(name string) {
+	account.Name = name
+	writeAccount()
 }
 
 /*
@@ -135,7 +153,7 @@ func GetTransactions() string {
 	}
 	for i := len(account.Transactions) - 1; i >= startIndex; i-- {
 		t := account.Transactions[i]
-		trans = append(trans, TransactionTO{Amount: t.Amount, Purpose: t.Purpose, Date: t.Date.Unix(), From: t.From, Typ: int(t.Typ)})
+		trans = append(trans, TransactionTO{Pkey: t.Pkey, Amount: t.Amount, Purpose: t.Purpose, Date: t.Date.Unix(), From: t.From, Typ: int(t.Typ)})
 	}
 	jsonData, err := json.Marshal(trans)
 	if err != nil {
@@ -150,7 +168,8 @@ func GetTransactions() string {
 **  We don't want to have a public function for adding transactions.
  */
 func AcceptProposal() string {
-	err := addTransaction(lastTransaction.Amount, lastTransaction.Purpose, lastTransaction.Date, lastTransaction.From, lastTransaction.Typ, lastTransaction.Uuid)
+	lastTransaction.Pkey = uuid.New().String()
+	err := addTransaction(lastTransaction.Pkey, lastTransaction.Amount, lastTransaction.Purpose, lastTransaction.Date, lastTransaction.From, lastTransaction.Typ, lastTransaction.Uuid)
 	if err != nil {
 		return err.Error()
 	}
@@ -166,7 +185,7 @@ func AcceptProposal() string {
 **  On the client a QR code will be created based on that string.
  */
 func GetProposalQRCode(amount int64, purpose string) string {
-	trans := _transaction{Amount: amount * -1, Purpose: purpose, Date: time.Now(), Typ: Lmp, From: account.Name, Uuid: account.Uuid}
+	trans := _transaction{Pkey: uuid.New().String(), Amount: amount * -1, Purpose: purpose, Date: time.Now(), Typ: Lmp, From: account.Name, Uuid: account.Uuid}
 	jsonData, err := json.Marshal(trans)
 	if err != nil {
 		log.Println(err)
@@ -184,15 +203,51 @@ func GetProposalQRCode(amount int64, purpose string) string {
 **	On the client a QR code will be created based on that string.
  */
 func GetAgreementQRCode() string {
-	trans := _transaction{Amount: lastTransaction.Amount * -1, Purpose: lastTransaction.Purpose, Date: time.Now(), Typ: Lmr, From: account.Name, Uuid: lastTransaction.Uuid}
+	trans := _transaction{Pkey: lastTransaction.Pkey, Amount: lastTransaction.Amount * -1, Purpose: lastTransaction.Purpose, Date: lastTransaction.Date, Typ: Lmr, From: account.Name, Uuid: lastTransaction.Uuid}
 	jsonData, err := json.Marshal(trans)
 	if err != nil {
 		log.Println(err)
 		return ""
 	}
+	log.Println(trans)
 	if lastTransaction.Purpose == "" {
 		log.Println("GetAgreementQRCode no purpose")
 		return "NO_PURPOSE"
+	}
+	return encryptStringGCM(string(jsonData), false)
+}
+
+/*
+**	Get a transaction from account, pack it to a json string and return the encrypted string.
+**	This is used in case the giver skipped the last step and wants to recreate the qr code.
+ */
+func GetAgreementQRCodeForTransaction(pkey string) string {
+	found := false
+	var trans _transaction
+	for _, t := range account.Transactions {
+		if t.Pkey == pkey {
+			if t.Typ == Lmp {
+				trans.Pkey = t.Pkey
+				trans.Amount = t.Amount * -1
+				trans.Date = t.Date
+				trans.From = account.Name
+				trans.Purpose = t.Purpose
+				trans.Typ = Lmr
+				trans.Uuid = t.Uuid
+				found = true
+			} else {
+				return "NOT LMP"
+			}
+			break
+		}
+	}
+	if found == false {
+		return "NOT FOUND"
+	}
+	jsonData, err := json.Marshal(trans)
+	if err != nil {
+		log.Println(err)
+		return ""
 	}
 	return encryptStringGCM(string(jsonData), false)
 }
@@ -255,7 +310,7 @@ func GetAgreementFromQRCode(enc string) string {
 		log.Println("GetAgreementFromQRCode: error transaction not for this user")
 		return "FRAUD"
 	}
-	if transactionExists(lastTransaction) {
+	if transactionExists(lastTransaction.Pkey) {
 		log.Println("GetAgreementFromQRCode: transaction already booked")
 		return "DOUBLE_SPENT"
 	}
@@ -264,7 +319,7 @@ func GetAgreementFromQRCode(enc string) string {
 		return "NO_PURPOSE"
 	}
 	// only check error on withdraw, not on receive
-	addTransaction(lastTransaction.Amount, lastTransaction.Purpose, lastTransaction.Date, lastTransaction.From, lastTransaction.Typ, lastTransaction.Uuid)
+	addTransaction(lastTransaction.Pkey, lastTransaction.Amount, lastTransaction.Purpose, lastTransaction.Date, lastTransaction.From, lastTransaction.Typ, lastTransaction.Uuid)
 
 	return "ok"
 }
