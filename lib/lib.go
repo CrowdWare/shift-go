@@ -19,3 +19,7 @@ func (e *BalanceError) Error() string {
 func Encrypt(value string) string {
 	return encryptStringGCM(value, false)
 }
+
+func Decrypt(enc string) (string, error) {
+	return decryptStringGCM(enc)
+}

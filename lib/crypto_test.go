@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"log"
 	"os"
 	"testing"
 )
@@ -15,7 +14,8 @@ func TestEncryptDecrypt(t *testing.T) {
 	enc := encryptStringGCM(teststring, false)
 	result, err := decryptStringGCM(enc)
 	if err != nil {
-		log.Fatal(err)
+		t.Error(err)
+		return
 	}
 	expected := teststring
 	if result != expected || enc == teststring {

@@ -11,6 +11,12 @@ import (
 )
 
 func generateSecretKey(db bool, read bool) ([]byte, error) {
+	var variable1 = var1
+	var variable2 = var2
+	var variable3 = var3
+	var variable4 = var4
+	var variable5 = var5
+
 	// Check if the file exists
 	if db {
 		variable3 = time.Now().Day()
@@ -55,22 +61,34 @@ func encryptStringGCM(value string, webservice bool) string {
 	} else {
 		key, err = generateSecretKey(false, false)
 		if err != nil {
-			log.Fatal(err)
+			if debug {
+				log.Println(err)
+			}
+			return ""
 		}
 	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		log.Fatal(err)
+		if debug {
+			log.Println(err)
+		}
+		return ""
 	}
 
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		log.Fatal(err)
+		if debug {
+			log.Println(err)
+		}
+		return ""
 	}
 
 	nonce := make([]byte, aesGCM.NonceSize())
 	if _, err := rand.Read(nonce); err != nil {
-		log.Fatal(err)
+		if debug {
+			log.Println(err)
+		}
+		return ""
 	}
 
 	ciphertext := aesGCM.Seal(nonce, nonce, []byte(value), nil)
@@ -81,7 +99,10 @@ func encryptStringGCM(value string, webservice bool) string {
 func encryptBytesGCM(plaintext []byte) ([]byte, []byte, error) {
 	key, err := generateSecretKey(true, false)
 	if err != nil {
-		log.Fatal(err)
+		if debug {
+			log.Println("generateSecretKey" + err.Error())
+		}
+		return nil, nil, err
 	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -136,7 +157,10 @@ func decryptStringGCM(value string) (string, error) {
 func decryptBytesGCM(ciphertext, nonce []byte) ([]byte, error) {
 	key, err := generateSecretKey(true, true)
 	if err != nil {
-		log.Fatal(err)
+		if debug {
+			log.Println(err)
+		}
+		return nil, err
 	}
 	block, err := aes.NewCipher(key)
 	if err != nil {

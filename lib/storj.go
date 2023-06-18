@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 
 	"storj.io/uplink"
 )
@@ -18,8 +19,11 @@ const bucketName = "shift"
 
 func initStorj(context context.Context) error {
 	ctx = context
-	plain, err := decryptStringGCM(storjAccessTokenEnc)
+	plain, err := decryptStringGCM(storj_access_token_enc)
 	if err != nil {
+		if debug {
+			log.Println("Error decrypt storj access token: " + err.Error())
+		}
 		return err
 	}
 	accessGrant := flag.String("access", plain, "access grant from satellite")

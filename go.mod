@@ -2,12 +2,14 @@ module github.com/crowdware/shift-go
 
 go 1.20
 
-require storj.io/uplink v1.10.0
+require (
+	github.com/google/uuid v1.3.0
+	storj.io/uplink v1.10.0
+)
 
 require (
 	github.com/calebcase/tmpfile v1.0.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/jtolio/eventkit v0.0.0-20221004135224-074cf276595b // indirect
 	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
 	github.com/spacemonkeygo/monkit/v3 v3.0.19 // indirect

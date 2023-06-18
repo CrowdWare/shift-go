@@ -92,13 +92,17 @@ func readAccount() bool {
 	if fileExists(dbFile) {
 		buffer, err := readFile(dbFile)
 		if err != nil {
-			log.Println("Error reading file " + dbFile)
-			log.Fatal(err)
+			if debug {
+				log.Println("Error reading file " + dbFile + ", " + err.Error())
+			}
+			return true
 		}
 		decoder := gob.NewDecoder(bytes.NewReader(buffer))
 		err = decoder.Decode(&account)
 		if err != nil {
-			log.Fatal(err)
+			if debug {
+				log.Println("readAccount: " + err.Error())
+			}
 		}
 		return true
 	}
@@ -110,11 +114,17 @@ func writeAccount() {
 	encoder := gob.NewEncoder(&buffer)
 	err := encoder.Encode(account)
 	if err != nil {
-		log.Fatal(err)
+		if debug {
+			log.Println(err)
+		}
+		return
 	}
 	err = writeFile(dbFile, buffer.Bytes())
 	if err != nil {
-		log.Fatal(err)
+		if debug {
+			log.Println(err)
+		}
+		return
 	}
 }
 

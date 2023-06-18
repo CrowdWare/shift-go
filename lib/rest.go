@@ -23,12 +23,14 @@ func registerAccount(
 		return 1
 	}
 	client := http.Client{}
+	url := "http://shift.crowdware.at:8080/"
 	url, err := decryptStringGCM(service_url_enc)
 	if err != nil {
-		log.Println("error with decryptStringGCM")
-		log.Fatal(err)
+		if debug {
+			log.Println("error decrypting service url: " + err.Error())
+		}
+		return 6
 	}
-	log.Println("url: " + url)
 
 	jsonParams := make(map[string]interface{})
 	testValue := "false"
@@ -37,7 +39,10 @@ func registerAccount(
 	}
 	api_key, err := decryptStringGCM(api_key_enc)
 	if err != nil {
-		log.Fatal(err)
+		if debug {
+			log.Println("error decrypting api key: " + err.Error())
+		}
+		return 5
 	}
 
 	jsonParams["key"] = encryptStringGCM(api_key[:16], true)
@@ -57,12 +62,16 @@ func registerAccount(
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("Error occured calling [register]: " + err.Error())
+		if debug {
+			log.Println("Error occured calling [register]: " + err.Error())
+		}
 		return 2
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Error: %s\n", resp.Status)
+		if debug {
+			log.Printf("Error: %s\n", resp.Status)
+		}
 		return 3
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -72,7 +81,10 @@ func registerAccount(
 	message := jsonResponse["message"].(string)
 
 	if isError {
-		log.Println("Error occured calling [register]: " + message)
+		if debug {
+			log.Println("Error occured calling register: " + message)
+		}
+		return 4
 	}
 	return 0
 }
@@ -81,7 +93,10 @@ func setScooping(test bool) int {
 	client := http.Client{}
 	url, err := decryptStringGCM(service_url_enc)
 	if err != nil {
-		log.Fatal(err)
+		if debug {
+			log.Println("Error decrypting servive url:" + err.Error())
+		}
+		return 5
 	}
 	jsonParams := make(map[string]interface{})
 	testValue := "false"
@@ -90,7 +105,10 @@ func setScooping(test bool) int {
 	}
 	api_key, err := decryptStringGCM(api_key_enc)
 	if err != nil {
-		log.Fatal(err)
+		if debug {
+			log.Println("Error decrypting api key: " + err.Error())
+		}
+		return 4
 	}
 
 	jsonParams["key"] = encryptStringGCM(api_key[:16], true)
@@ -110,7 +128,9 @@ func setScooping(test bool) int {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Error: %s\n", resp.Status)
+		if debug {
+			log.Printf("Error: %s\n", resp.Status)
+		}
 		return 2
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -119,7 +139,9 @@ func setScooping(test bool) int {
 	isError := jsonResponse["isError"].(bool)
 	message := jsonResponse["message"].(string)
 	if isError {
-		log.Println("Error occured calling [register]: " + message)
+		if debug {
+			log.Println("Error occured calling [register]: " + message)
+		}
 		return 3
 	} else {
 		account.Level_1_count = int(jsonResponse["count_1"].(float64))
@@ -135,7 +157,10 @@ func getMatelist(test bool) []Friend {
 	client := http.Client{}
 	url, err := decryptStringGCM(service_url_enc)
 	if err != nil {
-		log.Fatal(err)
+		if debug {
+			log.Println("Error decrypting servive url: " + err.Error())
+		}
+		return emptyList
 	}
 
 	jsonParams := make(map[string]interface{})
@@ -145,7 +170,10 @@ func getMatelist(test bool) []Friend {
 	}
 	api_key, err := decryptStringGCM(api_key_enc)
 	if err != nil {
-		log.Fatal(err)
+		if debug {
+			log.Println("Error decrypting api key: " + err.Error())
+		}
+		return emptyList
 	}
 
 	jsonParams["key"] = encryptStringGCM(api_key[:16], true)
@@ -161,11 +189,16 @@ func getMatelist(test bool) []Friend {
 
 	resp, err := client.Do(req)
 	if err != nil {
+		if debug {
+			log.Println("Error posting matelist: " + err.Error())
+		}
 		return emptyList
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Error: %s\n", resp.Status)
+		if debug {
+			log.Printf("Error: %s\n", resp.Status)
+		}
 		return emptyList
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -174,7 +207,9 @@ func getMatelist(test bool) []Friend {
 	isError := jsonResponse["isError"].(bool)
 	message := jsonResponse["message"].(string)
 	if isError {
-		log.Println("Error occured calling [register]: " + message)
+		if debug {
+			log.Println("Error occured calling register: " + message)
+		}
 		return emptyList
 	} else {
 		data := jsonResponse["data"].([]interface{})

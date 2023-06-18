@@ -3,7 +3,6 @@ package lib
 import (
 	"bytes"
 	"context"
-	"log"
 	"testing"
 )
 
@@ -11,18 +10,18 @@ func TestStorj(t *testing.T) {
 	Init("/tmp")
 	err := initStorj(context.Background())
 	if err != nil {
-		log.Fatal(err)
+		t.Errorf("initStorj failed %s", err.Error())
+		return
 	}
-
 	uploadBuffer := []byte("one fish two fish red fish blue fish")
 	err = put("foo/bar/baz", uploadBuffer)
 	if err != nil {
-		log.Fatal(err)
+		t.Errorf("put failed: " + err.Error())
 	}
 
 	buffer, err := get("foo/bar/baz")
 	if err != nil {
-		log.Fatal(err)
+		t.Errorf("get failed: " + err.Error())
 	}
 
 	if !bytes.Equal(uploadBuffer, buffer) {
@@ -31,6 +30,6 @@ func TestStorj(t *testing.T) {
 
 	err = delete("foo/bar/baz")
 	if err != nil {
-		log.Fatal(err)
+		t.Errorf("delete failed: " + err.Error())
 	}
 }
