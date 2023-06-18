@@ -1,6 +1,7 @@
 package lib
 
 const debug = true
+const initial_amount = 10
 
 const var1 = 1358
 const var2 = 5463

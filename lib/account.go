@@ -63,7 +63,7 @@ func addAccount(name, _uuid, ruuid, country, language string, test bool) {
 		Country:  country,
 		Language: language,
 	}
-	addTransaction(uuid.New().String(), 10, "", time.Now(), "", InitialBooking, "")
+	addTransaction(uuid.New().String(), initial_amount, "", time.Now(), "", InitialBooking, "")
 	writeAccount()
 	registerAccount(name, _uuid, ruuid, country, language, test)
 }

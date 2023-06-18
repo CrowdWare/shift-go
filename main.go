@@ -59,7 +59,8 @@ func writeVars() {
 	writer := bufio.NewWriter(file)
 
 	text := "package lib\n\n"
-	text += "const debug = false\n\n"
+	text += "const debug = false\n"
+	text += "const initial_amount = 1\n\n"
 	text += "const var1 = " + strconv.Itoa(generateRandomNumber(1000, 9999)) + "\n"
 	text += "const var2 = " + strconv.Itoa(generateRandomNumber(1000, 9999)) + "\n"
 	text += "const var3 = " + strconv.Itoa(generateRandomNumber(1000, 9999)) + "\n"
