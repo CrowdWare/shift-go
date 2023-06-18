@@ -11,39 +11,32 @@ import (
 )
 
 func generateSecretKey(db bool, read bool) ([]byte, error) {
-	// Declare the variables used for key derivation
-	var value3 int
-
 	// Check if the file exists
 	if db {
-		value3 = time.Now().Day()
+		variable3 = time.Now().Day()
 		fileInfo, err := os.Stat(dbFile)
 		if read && err == nil {
 			modTime := fileInfo.ModTime()
-			value3 = modTime.Day()
+			variable3 = modTime.Day()
 		}
 	}
-	// Define the variables used for key derivation
-	var variable1 = 7539
-	var variable2 = 2375
-
 	// Perform calculations to derive the key
-	derivedKey := int64(variable1 * variable2 * value3 * 9736635 * 42367736)
+	derivedKey := int64(variable1 * variable2 * variable3 * variable4 * variable5)
 
 	// Convert the derived key to a 32-byte slice
 	key := make([]byte, 32)
 	for i := 0; i < 8; i++ {
 		key[i] = byte(derivedKey >> (i * 8))
 	}
-	derivedKey = int64(variable1 + variable2*value3*9736635*42367736)
+	derivedKey = int64(variable1 + variable2*variable3*variable4*variable5)
 	for i := 8; i < 16; i++ {
 		key[i] = byte(derivedKey >> ((i - 8) * 8))
 	}
-	derivedKey = int64(variable1 + variable2 + value3*9736635*42367736)
+	derivedKey = int64(variable1 + variable2 + variable3*variable4*variable5)
 	for i := 16; i < 24; i++ {
 		key[i] = byte(derivedKey >> ((i - 16) * 8))
 	}
-	derivedKey = int64(variable1*variable2 + value3*9736615*42367736)
+	derivedKey = int64(variable1*variable2 + variable3*variable4*variable5)
 	for i := 24; i < 32; i++ {
 		key[i] = byte(derivedKey >> ((i - 24) * 8))
 	}
@@ -56,7 +49,9 @@ func encryptStringGCM(value string, webservice bool) string {
 	var err error
 
 	if webservice {
-		key = []byte("1234567890123456")
+		var secret_key string
+		secret_key, err = decryptStringGCM(secret_key_enc)
+		key = []byte(secret_key)
 	} else {
 		key, err = generateSecretKey(false, false)
 		if err != nil {

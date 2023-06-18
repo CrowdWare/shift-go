@@ -15,3 +15,7 @@ type BalanceError struct {
 func (e *BalanceError) Error() string {
 	return e.message
 }
+
+func Encrypt(value string) string {
+	return encryptStringGCM(value, false)
+}
