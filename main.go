@@ -13,34 +13,41 @@ import (
 	"github.com/crowdware/shift-go/lib"
 )
 
-func readPythonConfig(filePath string) (string, string, string, error) {
+func readPythonConfig(filePath string) (string, string, string, string, error) {
 	fileContent, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return "", "", "", fmt.Errorf("failed to read file: %v", err)
+		return "", "", "", "", fmt.Errorf("failed to read file: %v", err)
 	}
 
 	re := regexp.MustCompile(`SHIFT_API_KEY\s*=\s*"(.*?)"`)
 	match := re.FindStringSubmatch(string(fileContent))
 	if len(match) != 2 {
-		return "", "", "", fmt.Errorf("unable to find SHIFT_API_KEY in the file")
+		return "", "", "", "", fmt.Errorf("unable to find SHIFT_API_KEY in the file")
 	}
 	apiKey := match[1]
+
+	re = regexp.MustCompile(`SHIFT_CLIENT_KEY\s*=\s*"(.*?)"`)
+	match = re.FindStringSubmatch(string(fileContent))
+	if len(match) != 2 {
+		return "", "", "", "", fmt.Errorf("unable to find SHIFT_CLIENT_KEY in the file")
+	}
+	clientKey := match[1]
 
 	re = regexp.MustCompile(`SHIFT_SECRET_KEY\s*=\s*"(.*?)"`)
 	match = re.FindStringSubmatch(string(fileContent))
 	if len(match) != 2 {
-		return "", "", "", fmt.Errorf("unable to find SHIFT_SECRET_KEY in the file")
+		return "", "", "", "", fmt.Errorf("unable to find SHIFT_SECRET_KEY in the file")
 	}
 	secretkey := match[1]
 
 	re = regexp.MustCompile(`STORJ_ACCESS_TOKEN\s*=\s*"(.*?)"`)
 	match = re.FindStringSubmatch(string(fileContent))
 	if len(match) != 2 {
-		return "", "", "", fmt.Errorf("unable to find STORJ_ACCESS_TOKEN in the file")
+		return "", "", "", "", fmt.Errorf("unable to find STORJ_ACCESS_TOKEN in the file")
 	}
 	storj := match[1]
 
-	return apiKey, secretkey, storj, nil
+	return apiKey, secretkey, storj, clientKey, nil
 }
 
 func generateRandomNumber(min, max int) int {
@@ -69,6 +76,7 @@ func writeVars() {
 	text += "\n"
 	text += "const secret_key_enc = \"\"\n"
 	text += "const api_key_enc = \"\"\n"
+	text += "const client_key_enc = \"\"\n"
 	text += "const service_url_enc = \"\"\n"
 	text += "const storj_access_token_enc = \"\"\n"
 
@@ -94,7 +102,7 @@ func secret() {
 
 	scanner := bufio.NewScanner(infile)
 	text := ""
-	numLines := 7
+	numLines := 10
 	lineCount := 0
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -120,7 +128,7 @@ func secret() {
 
 	text += "\n"
 
-	api_key, secret_key, storj_access_token, err := readPythonConfig("shift_keys.py")
+	api_key, secret_key, storj_access_token, client_key, err := readPythonConfig("shift_keys.py")
 	if err != nil {
 		fmt.Println("Error reading Python config:", err)
 		return
@@ -131,6 +139,9 @@ func secret() {
 	// there was a reason that I used this extra bytes
 	api_key_enc := lib.Encrypt(api_key + "8764398347362489")
 	text += "const api_key_enc = \"" + api_key_enc + "\"\n"
+
+	client_key_enc := lib.Encrypt(client_key)
+	text += "const client_key_enc = \"" + client_key_enc + "\"\n"
 
 	service_url_enc := lib.Encrypt("http://shift.crowdware.at:8080/")
 	text += "const service_url_enc = \"" + service_url_enc + "\"\n"

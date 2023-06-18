@@ -19,7 +19,7 @@ const bucketName = "shift"
 
 func initStorj(context context.Context) error {
 	ctx = context
-	plain, err := decryptStringGCM(storj_access_token_enc)
+	plain, err := decryptStringGCM(storj_access_token_enc, false)
 	if err != nil {
 		if debug {
 			log.Println("Error decrypt storj access token: " + err.Error())

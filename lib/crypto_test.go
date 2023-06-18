@@ -9,10 +9,10 @@ import (
 )
 
 func TestEncryptDecrypt(t *testing.T) {
-	Init("")
+	dbFile = "/tmp/shift.db"
 	teststring := "The quick brown fox"
 	enc := encryptStringGCM(teststring, false)
-	result, err := decryptStringGCM(enc)
+	result, err := decryptStringGCM(enc, false)
 	if err != nil {
 		t.Error(err)
 		return
@@ -22,13 +22,13 @@ func TestEncryptDecrypt(t *testing.T) {
 		t.Errorf("Unexpected result. Got: %s, Expected: %s", result, expected)
 	}
 
-	result, err = decryptStringGCM(enc + "a")
+	result, err = decryptStringGCM(enc+"a", false)
 	if err == nil {
 		t.Error("Expected an error decrypting")
 	}
 	runes := []rune(enc)
 	runes[3] = 'a'
-	result, err = decryptStringGCM(string(runes))
+	result, err = decryptStringGCM(string(runes), false)
 	if err == nil {
 		t.Error("Expected an error decrypting")
 	}
@@ -36,7 +36,7 @@ func TestEncryptDecrypt(t *testing.T) {
 
 func TestEncryptAndDecryptBytesGCM(t *testing.T) {
 	plaintext := []byte("Hello, World!")
-	Init("")
+	dbFile = "/tmp/shift.db"
 	// Encrypt the plaintext
 	ciphertext, nonce, err := encryptBytesGCM(plaintext)
 	if err != nil {
@@ -57,7 +57,7 @@ func TestEncryptAndDecryptBytesGCM(t *testing.T) {
 
 func TestEncryptAndDecryptBytesGCMWithBinaryData(t *testing.T) {
 	plaintext := []byte{0x01, 0x02, 0x03, 0x04, 0x05}
-	Init("")
+	dbFile = "/tmp/shift.db"
 	// Encrypt the plaintext
 	ciphertext, nonce, err := encryptBytesGCM(plaintext)
 	if err != nil {
@@ -78,7 +78,7 @@ func TestEncryptAndDecryptBytesGCMWithBinaryData(t *testing.T) {
 
 func TestEncryptAndDecryptBytesGCMWithHexInput(t *testing.T) {
 	plaintext := []byte("Hello, World!")
-	Init("")
+	dbFile = "/tmp/shift.db"
 	// Encrypt the plaintext
 	ciphertext, nonce, err := encryptBytesGCM(plaintext)
 	if err != nil {
@@ -114,7 +114,7 @@ func TestEncryptAndDecryptBytesGCMWithHexInput(t *testing.T) {
 func TestEncryptDecryptFile(t *testing.T) {
 	// Read the file content
 	plaintext := []byte("This is a test")
-	Init("/tmp")
+	dbFile = "/tmp/shift.db"
 	// Encrypt and write the content to a file
 	err := writeFile(dbFile, plaintext)
 	if err != nil {

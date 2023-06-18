@@ -3,6 +3,7 @@ package lib
 import (
 	"encoding/json"
 	"log"
+	"runtime"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,6 +25,13 @@ type TransactionTO struct {
 **	Set the path where the db can be stored.
  */
 func Init(filesDir string) {
+	// avoid scooping on a desktop
+	if runtime.GOOS != "android" && runtime.GOOS != "ios" {
+		growLevel0 = 0
+		growLevel1 = 0
+		growLevel2 = 0
+		growLevel3 = 0
+	}
 	dbFile = filesDir + "/shift.db"
 }
 
@@ -93,12 +101,6 @@ func StartScooping() {
 	if account.IsScooping {
 		return
 	}
-	account.IsScooping = true
-	account.Scooping = time.Now()
-	account.Level_1_count = 0
-	account.Level_2_count = 0
-	account.Level_3_count = 0
-	writeAccount()
 	setScooping(false)
 }
 
@@ -267,7 +269,7 @@ func GetAgreementQRCodeForTransaction(pkey string) string {
 **  If it cannot be decrypted or unpacked its a sign for an attack.
  */
 func GetProposalFromQRCode(enc string) string {
-	jsonData, err := decryptStringGCM(enc)
+	jsonData, err := decryptStringGCM(enc, false)
 	if err != nil {
 		if debug {
 			log.Println("BookTransaction: error decrypting transaction")
@@ -307,7 +309,7 @@ func GetProposalFromQRCode(enc string) string {
 **	everything is fine we book it.
  */
 func GetAgreementFromQRCode(enc string) string {
-	jsonData, err := decryptStringGCM(enc)
+	jsonData, err := decryptStringGCM(enc, false)
 	if err != nil {
 		if debug {
 			log.Println("GetAgreementFromQRCode: error decrypting transaction")

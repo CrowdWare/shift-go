@@ -56,7 +56,7 @@ func encryptStringGCM(value string, webservice bool) string {
 
 	if webservice {
 		var secret_key string
-		secret_key, err = decryptStringGCM(secret_key_enc)
+		secret_key, err = decryptStringGCM(secret_key_enc, false)
 		key = []byte(secret_key)
 	} else {
 		key, err = generateSecretKey(false, false)
@@ -124,10 +124,19 @@ func encryptBytesGCM(plaintext []byte) ([]byte, []byte, error) {
 	return ciphertext, nonce, nil
 }
 
-func decryptStringGCM(value string) (string, error) {
-	key, err := generateSecretKey(false, false)
-	if err != nil {
-		return "", err
+func decryptStringGCM(value string, webservice bool) (string, error) {
+	var key []byte
+	var err error
+
+	if webservice {
+		var secret_key string
+		secret_key, err = decryptStringGCM(secret_key_enc, false)
+		key = []byte(secret_key)
+	} else {
+		key, err = generateSecretKey(false, false)
+		if err != nil {
+			return "", err
+		}
 	}
 	block, err := aes.NewCipher(key)
 	if err != nil {

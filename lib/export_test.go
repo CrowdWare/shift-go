@@ -68,7 +68,7 @@ func TestCalculateWorth(t *testing.T) {
 }
 
 func TestAddTransaction(t *testing.T) {
-	Init("/tmp")
+	dbFile = "/tmp/shift.db"
 	account = _account{}
 	addTransaction("", 10, "Purp", time.Now(), "fr", InitialBooking, "")
 	for i := 0; i < 31; i++ {
@@ -156,7 +156,7 @@ func TestGetProposalQRCode(t *testing.T) {
 }
 
 func TestAcceptProposal(t *testing.T) {
-	Init("/tmp")
+	dbFile = "/tmp/shift.db"
 	account = _account{}
 	addTransaction("pkey", 10, "", time.Now(), "", InitialBooking, "")
 	enc := GetProposalQRCode(5, "Purpose")
@@ -185,7 +185,7 @@ func TestAcceptProposal(t *testing.T) {
 }
 
 func TestGetAgreementQRCode(t *testing.T) {
-	Init("/tmp")
+	dbFile = "/tmp/shift.db"
 	account = _account{}
 	lastTransaction.Amount = -13
 	lastTransaction.Purpose = "Purpose"
@@ -214,7 +214,7 @@ func TestGetAgreementQRCode(t *testing.T) {
 }
 
 func TestFullTransaction(t *testing.T) {
-	Init("/tmp")
+	dbFile = "/tmp/shift.db"
 	account = _account{}
 	addTransaction("pkey", 20, "", time.Now(), "", InitialBooking, "")
 	enc := GetProposalQRCode(13, "Massage")
@@ -237,7 +237,7 @@ func TestFullTransaction(t *testing.T) {
 
 func TestGetAgreementQRCodeForTransaction(t *testing.T) {
 	now := time.Now()
-	Init("/tmp")
+	dbFile = "/tmp/shift.db"
 	account = _account{}
 	addTransaction("pkey", 20, "", now, "", InitialBooking, "")
 	enc := GetProposalQRCode(13, "Massage")

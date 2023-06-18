@@ -3,6 +3,11 @@ package lib
 var dbFile string
 var account _account
 var lastTransaction _transaction
+var initialAmount = int64(initial_amount)
+var growLevel0 = int64(10000)
+var growLevel1 = int64(1800)
+var growLevel2 = int64(360)
+var growLevel3 = int64(75)
 
 const (
 	algorithm = "AES/GCM/NoPadding"
@@ -21,5 +26,5 @@ func Encrypt(value string) string {
 }
 
 func Decrypt(enc string) (string, error) {
-	return decryptStringGCM(enc)
+	return decryptStringGCM(enc, false)
 }

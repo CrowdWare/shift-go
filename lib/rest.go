@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 )
 
 const user_agent = "Shift 1.0"
@@ -24,7 +25,7 @@ func registerAccount(
 	}
 	client := http.Client{}
 	url := "http://shift.crowdware.at:8080/"
-	url, err := decryptStringGCM(service_url_enc)
+	url, err := decryptStringGCM(service_url_enc, false)
 	if err != nil {
 		if debug {
 			log.Println("error decrypting service url: " + err.Error())
@@ -37,7 +38,7 @@ func registerAccount(
 	if test {
 		testValue = "true"
 	}
-	api_key, err := decryptStringGCM(api_key_enc)
+	api_key, err := decryptStringGCM(api_key_enc, false)
 	if err != nil {
 		if debug {
 			log.Println("error decrypting api key: " + err.Error())
@@ -91,7 +92,7 @@ func registerAccount(
 
 func setScooping(test bool) int {
 	client := http.Client{}
-	url, err := decryptStringGCM(service_url_enc)
+	url, err := decryptStringGCM(service_url_enc, false)
 	if err != nil {
 		if debug {
 			log.Println("Error decrypting servive url:" + err.Error())
@@ -103,17 +104,18 @@ func setScooping(test bool) int {
 	if test {
 		testValue = "true"
 	}
-	api_key, err := decryptStringGCM(api_key_enc)
+	api_key, err := decryptStringGCM(api_key_enc, false)
 	if err != nil {
 		if debug {
 			log.Println("Error decrypting api key: " + err.Error())
 		}
 		return 4
 	}
-
+	timeString := time.Now().Format("2006-01-02 15:04:05")
 	jsonParams["key"] = encryptStringGCM(api_key[:16], true)
 	jsonParams["uuid"] = account.Uuid
 	jsonParams["test"] = testValue
+	jsonParams["time"] = timeString
 
 	jsonBytes, _ := json.Marshal(jsonParams)
 	entity := bytes.NewBuffer(jsonBytes)
@@ -140,10 +142,35 @@ func setScooping(test bool) int {
 	message := jsonResponse["message"].(string)
 	if isError {
 		if debug {
-			log.Println("Error occured calling [register]: " + message)
+			log.Println("Error occured calling setscooping: " + message)
 		}
+		account.IsScooping = false
+		writeAccount()
 		return 3
 	} else {
+		client_key, err := decryptStringGCM(client_key_enc, false)
+		if err != nil {
+			if debug {
+				log.Println("Error decrypting client key: " + err.Error())
+			}
+			return 7
+		}
+		key_enc := jsonResponse["key"].(string)
+		key, err := decryptStringGCM(key_enc, true)
+		if err != nil {
+			if debug {
+				log.Println("Error decrypting response: " + err.Error())
+			}
+			return 6
+		}
+		if key != client_key+timeString {
+			if debug {
+				log.Println("Error response not valid: " + key)
+			}
+			return 7
+		}
+		account.IsScooping = true
+		account.Scooping = time.Now()
 		account.Level_1_count = int(jsonResponse["count_1"].(float64))
 		account.Level_2_count = int(jsonResponse["count_2"].(float64))
 		account.Level_3_count = int(jsonResponse["count_3"].(float64))
@@ -155,7 +182,7 @@ func setScooping(test bool) int {
 func getMatelist(test bool) []Friend {
 	emptyList := make([]Friend, 0)
 	client := http.Client{}
-	url, err := decryptStringGCM(service_url_enc)
+	url, err := decryptStringGCM(service_url_enc, false)
 	if err != nil {
 		if debug {
 			log.Println("Error decrypting servive url: " + err.Error())
@@ -168,7 +195,7 @@ func getMatelist(test bool) []Friend {
 	if test {
 		testValue = "true"
 	}
-	api_key, err := decryptStringGCM(api_key_enc)
+	api_key, err := decryptStringGCM(api_key_enc, false)
 	if err != nil {
 		if debug {
 			log.Println("Error decrypting api key: " + err.Error())

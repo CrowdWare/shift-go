@@ -33,7 +33,7 @@ func TestSerialize(t *testing.T) {
 }
 
 func TestReadAccount(t *testing.T) {
-	Init("/tmp")
+	dbFile = "/tmp/shift.db"
 	result := readAccount()
 	expected := false
 	if result != expected {
@@ -52,7 +52,7 @@ func TestReadAccount(t *testing.T) {
 }
 
 func TestWriteReadAccount(t *testing.T) {
-	Init("/tmp")
+	dbFile = "/tmp/shift.db"
 	account = _account{Name: "Hans", Language: "en", Scooping: time.Date(2023, 12, 23, 9, 0, 0, 0, time.Local)}
 	trans1 := _transaction{Amount: 13, Date: time.Date(2023, 3, 4, 0, 0, 0, 0, time.Local), Typ: Lmp}
 	trans2 := _transaction{Amount: 15, Date: time.Date(2021, 4, 2, 0, 0, 0, 0, time.Local), Typ: Lmp}
@@ -73,7 +73,7 @@ func TestWriteReadAccount(t *testing.T) {
 }
 
 func TestCheckScooping(t *testing.T) {
-	Init("/tmp")
+	dbFile = "/tmp/shift.db"
 	account = _account{}
 	res := checkScooping()
 	if res != false {

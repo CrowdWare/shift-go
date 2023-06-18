@@ -63,7 +63,7 @@ func addAccount(name, _uuid, ruuid, country, language string, test bool) {
 		Country:  country,
 		Language: language,
 	}
-	addTransaction(uuid.New().String(), initial_amount, "", time.Now(), "", InitialBooking, "")
+	addTransaction(uuid.New().String(), initialAmount, "", time.Now(), "", InitialBooking, "")
 	writeAccount()
 	registerAccount(name, _uuid, ruuid, country, language, test)
 }
@@ -129,19 +129,19 @@ func writeAccount() {
 }
 
 func calcGrowPerDay() int64 {
-	grow := int64(10_000) +
-		int64(min(account.Level_1_count, 10))*1800 +
-		int64(min(account.Level_2_count, 100))*360 +
-		int64(min(account.Level_3_count, 1000))*75
+	grow := int64(growLevel0) +
+		int64(min(account.Level_1_count, 10))*growLevel1 +
+		int64(min(account.Level_2_count, 100))*growLevel2 +
+		int64(min(account.Level_3_count, 1000))*growLevel3
 	return grow / 1000
 }
 
 func calcGrowPerDiff(duration time.Duration) int64 {
 	hours := math.Min(20, duration.Hours())
-	grow := float64(10_000)/20*hours +
-		float64(min(account.Level_1_count, 10))*1800/20*hours +
-		float64(min(account.Level_2_count, 100))*360/20*hours +
-		float64(min(account.Level_3_count, 1000))*75/20*hours
+	grow := float64(growLevel0)/20*hours +
+		float64(min(account.Level_1_count, 10))*float64(growLevel1)/20*hours +
+		float64(min(account.Level_2_count, 100))*float64(growLevel2)/20*hours +
+		float64(min(account.Level_3_count, 1000))*float64(growLevel3)/20*hours
 	return int64(grow)
 }
 
