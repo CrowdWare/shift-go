@@ -23,8 +23,9 @@ func registerAccount(
 	if ruuid == "" {
 		return 1
 	}
+
 	client := http.Client{}
-	url := "http://shift.crowdware.at:8080/"
+
 	url, err := decryptStringGCM(service_url_enc, false)
 	if err != nil {
 		if debug {
@@ -87,6 +88,7 @@ func registerAccount(
 		}
 		return 4
 	}
+
 	return 0
 }
 
@@ -98,7 +100,7 @@ func setScooping(test bool) int {
 		if debug {
 			log.Println("Error decrypting service url:" + err.Error())
 		}
-		return 5
+		return 1
 	}
 
 	jsonParams := make(map[string]interface{})
@@ -112,7 +114,7 @@ func setScooping(test bool) int {
 		if debug {
 			log.Println("Error decrypting api key: " + err.Error())
 		}
-		return 4
+		return 2
 	}
 	timeString := time.Now().Format("2006-01-02 15:04:05")
 	jsonParams["key"] = encryptStringGCM(api_key[:16], true)
@@ -129,14 +131,14 @@ func setScooping(test bool) int {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return 1
+		return 3
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		if debug {
 			log.Printf("Error: %s\n", resp.Status)
 		}
-		return 2
+		return 4
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
 	jsonResponse := make(map[string]interface{})
@@ -149,14 +151,14 @@ func setScooping(test bool) int {
 		}
 		account.IsScooping = false
 		writeAccount()
-		return 3
+		return 5
 	} else {
 		client_key, err := decryptStringGCM(client_key_enc, false)
 		if err != nil {
 			if debug {
 				log.Println("Error decrypting client key: " + err.Error())
 			}
-			return 7
+			return 6
 		}
 		key_enc := jsonResponse["key"].(string)
 		key, err := decryptStringGCM(key_enc, true)
@@ -164,13 +166,13 @@ func setScooping(test bool) int {
 			if debug {
 				log.Println("Error decrypting response: " + err.Error())
 			}
-			return 6
+			return 7
 		}
 		if key != client_key+timeString {
 			if debug {
 				log.Println("Error response not valid: " + key)
 			}
-			return 7
+			return 8
 		}
 		account.IsScooping = true
 		account.Scooping = time.Now()

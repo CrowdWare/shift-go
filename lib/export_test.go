@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -246,19 +247,22 @@ func TestGetAgreementQRCodeForTransaction(t *testing.T) {
 	enc = GetAgreementQRCode()
 	res := GetAgreementFromQRCode(enc)
 	enc2 := GetAgreementQRCodeForTransaction(account.Transactions[1].Pkey)
-	res2 := GetAgreementFromQRCode(enc2)
+	tokens := strings.Split(enc2, "|")
+	res2 := GetAgreementFromQRCode(tokens[1])
 
 	if res != res2 {
-		t.Errorf("Expected two eqal jsons but got %s anf %s", res, res2)
+		t.Errorf("Expected two eqal jsons but got %s and %s", res, res2)
 	}
 	account.Transactions[1].Typ = Scooped
 	enc2 = GetAgreementQRCodeForTransaction(account.Transactions[1].Pkey)
-	if enc2 != "NOT LMP" {
-		t.Errorf("Expected NOT LMP but got %s", enc2)
+	tokens = strings.Split(enc2, "|")
+	if tokens[1] != "NOT LMP" {
+		t.Errorf("Expected NOT LMP but got %s", tokens[1])
 	}
 	enc2 = GetAgreementQRCodeForTransaction("invalid")
-	if enc2 != "NOT FOUND" {
-		t.Errorf("Expected NOT FOUND but got %s", enc2)
+	tokens = strings.Split(enc2, "|")
+	if tokens[1] != "NOT FOUND" {
+		t.Errorf("Expected NOT FOUND but got %s", tokens[1])
 	}
 	os.Remove("/tmp/shift.db")
 }

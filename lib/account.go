@@ -55,7 +55,7 @@ type _transaction struct {
 	Uuid    string // receiver uuid
 }
 
-func addAccount(name, _uuid, ruuid, country, language string, test bool) {
+func addAccount(name, _uuid, ruuid, country, language string, test bool) int {
 	account = _account{
 		Name:     strings.TrimSpace(name),
 		Uuid:     strings.TrimSpace(_uuid),
@@ -63,9 +63,10 @@ func addAccount(name, _uuid, ruuid, country, language string, test bool) {
 		Country:  country,
 		Language: language,
 	}
+	res := registerAccount(name, _uuid, ruuid, country, language, test)
 	addTransaction(uuid.New().String(), initialAmount, "", time.Now(), "", InitialBooking, "")
 	writeAccount()
-	registerAccount(name, _uuid, ruuid, country, language, test)
+	return res
 }
 
 func addTransaction(pkey string, amount int64, purpose string, date time.Time, from string, typ TransactionType, _uuid string) error {

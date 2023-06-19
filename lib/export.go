@@ -77,8 +77,8 @@ func IsScooping() bool {
 **	Create the account and send it to the rest service.
 ** 	This is only called once running the app for the first time.
  */
-func CreateAccount(name, uuid, ruuid, country, language string) {
-	addAccount(name, uuid, ruuid, country, language, false)
+func CreateAccount(name, uuid, ruuid, country, language string) int {
+	return addAccount(name, uuid, ruuid, country, language, false)
 }
 
 /*
@@ -97,11 +97,11 @@ func GetMatelist() string {
 **	Set the account in scooping mode, scooping is set to now and rest method is called.
 **	The level counts will be set after the rest call.
  */
-func StartScooping() {
+func StartScooping() int {
 	if account.IsScooping {
-		return
+		return 1
 	}
-	setScooping(false)
+	return setScooping(false)
 }
 
 /*
@@ -234,33 +234,43 @@ func GetAgreementQRCode() string {
  */
 func GetAgreementQRCodeForTransaction(pkey string) string {
 	found := false
+	isLmp := false
 	var trans _transaction
 	for _, t := range account.Transactions {
 		if t.Pkey == pkey {
+			trans.Pkey = t.Pkey
+			trans.Date = t.Date
 			if t.Typ == Lmp {
-				trans.Pkey = t.Pkey
+				isLmp = true
 				trans.Amount = t.Amount * -1
-				trans.Date = t.Date
 				trans.From = account.Name
-				trans.Purpose = t.Purpose
 				trans.Typ = Lmr
-				trans.Uuid = t.Uuid
-				found = true
 			} else {
-				return "NOT LMP"
+				isLmp = false
+				trans.Amount = t.Amount
+				trans.From = t.From
+				trans.Typ = t.Typ
 			}
+			trans.Purpose = t.Purpose
+			trans.Uuid = t.Uuid
+			found = true
 			break
 		}
 	}
 	if found == false {
-		return "NOT FOUND"
+		return "|NOT FOUND"
 	}
 	jsonData, err := json.Marshal(trans)
 	if err != nil {
-		log.Println(err)
-		return ""
+		if debug {
+			log.Println(err)
+		}
+		return " | "
 	}
-	return encryptStringGCM(string(jsonData), false)
+	if isLmp {
+		return string(jsonData) + "|" + encryptStringGCM(string(jsonData), false)
+	}
+	return string(jsonData) + "|NOT LMP"
 }
 
 /*
@@ -276,6 +286,7 @@ func GetProposalFromQRCode(enc string) string {
 		}
 		return "FRAUD"
 	}
+
 	err = json.Unmarshal([]byte(jsonData), &lastTransaction)
 	if err != nil {
 		if debug {
@@ -284,10 +295,7 @@ func GetProposalFromQRCode(enc string) string {
 		return "FRAUD"
 	}
 	if lastTransaction.Typ != Lmp {
-		if debug {
-			log.Println("BookTransaction: wrong transaction typ")
-		}
-		return "FRAUD"
+		return "WRONG_TYP"
 	}
 	if lastTransaction.Typ == Lmp && lastTransaction.Amount > 0 {
 		if debug {
@@ -301,6 +309,7 @@ func GetProposalFromQRCode(enc string) string {
 		}
 		return "NO_PURPOSE"
 	}
+
 	return string(jsonData)
 }
 
@@ -323,6 +332,9 @@ func GetAgreementFromQRCode(enc string) string {
 		}
 		return "FRAUD"
 	}
+	if lastTransaction.Typ == Lmp {
+		return "WRONG_TYP"
+	}
 	if lastTransaction.Typ != Lmr {
 		if debug {
 			log.Println("GetAgreementFromQRCode: wrong transaction typ")
@@ -339,7 +351,7 @@ func GetAgreementFromQRCode(enc string) string {
 		if debug {
 			log.Println("GetAgreementFromQRCode: error transaction not for this user")
 		}
-		return "FRAUD"
+		return "WRONG_RECEIVER"
 	}
 	if transactionExists(lastTransaction.Pkey) {
 		if debug {
