@@ -11,24 +11,24 @@ import (
 )
 
 func generateSecretKey(db bool, read bool) ([]byte, error) {
-	var variable1 = var1
-	var variable2 = var2
-	var variable3 = var3
-	var variable4 = var4
-	var variable5 = var5
+	var variable1 = int64(var1)
+	var variable2 = int64(var2)
+	var variable3 = int64(var3)
+	var variable4 = int64(var4)
+	var variable5 = int64(var5)
 
 	// Check if the file exists
 	if db {
-		variable3 = time.Now().Day()
+		variable3 = int64(time.Now().Day())
 		fileInfo, err := os.Stat(dbFile)
 		if read && err == nil {
 			modTime := fileInfo.ModTime()
-			variable3 = modTime.Day()
+			variable3 = int64(modTime.Day())
 		}
 	}
+
 	// Perform calculations to derive the key
 	derivedKey := int64(variable1 * variable2 * variable3 * variable4 * variable5)
-
 	// Convert the derived key to a 32-byte slice
 	key := make([]byte, 32)
 	for i := 0; i < 8; i++ {
@@ -46,7 +46,6 @@ func generateSecretKey(db bool, read bool) ([]byte, error) {
 	for i := 24; i < 32; i++ {
 		key[i] = byte(derivedKey >> ((i - 24) * 8))
 	}
-
 	return key, nil
 }
 

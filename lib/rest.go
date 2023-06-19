@@ -92,18 +92,21 @@ func registerAccount(
 
 func setScooping(test bool) int {
 	client := http.Client{}
+
 	url, err := decryptStringGCM(service_url_enc, false)
 	if err != nil {
 		if debug {
-			log.Println("Error decrypting servive url:" + err.Error())
+			log.Println("Error decrypting service url:" + err.Error())
 		}
 		return 5
 	}
+
 	jsonParams := make(map[string]interface{})
 	testValue := "false"
 	if test {
 		testValue = "true"
 	}
+
 	api_key, err := decryptStringGCM(api_key_enc, false)
 	if err != nil {
 		if debug {
@@ -185,7 +188,7 @@ func getMatelist(test bool) []Friend {
 	url, err := decryptStringGCM(service_url_enc, false)
 	if err != nil {
 		if debug {
-			log.Println("Error decrypting servive url: " + err.Error())
+			log.Println("Error decrypting service url: " + err.Error())
 		}
 		return emptyList
 	}
