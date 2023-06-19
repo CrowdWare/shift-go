@@ -50,6 +50,7 @@ type _transaction struct {
 	Amount  int64
 	Date    time.Time
 	From    string
+	To      string
 	Purpose string
 	Typ     TransactionType
 	Uuid    string // receiver uuid
@@ -64,23 +65,24 @@ func addAccount(name, _uuid, ruuid, country, language string, test bool) int {
 		Language: language,
 	}
 	res := registerAccount(name, _uuid, ruuid, country, language, test)
-	addTransaction(uuid.New().String(), initialAmount, "", time.Now(), "", InitialBooking, "")
+	addTransaction(uuid.New().String(), initialAmount, "", time.Now(), "", "", InitialBooking, "")
 	writeAccount()
 	return res
 }
 
-func addTransaction(pkey string, amount int64, purpose string, date time.Time, from string, typ TransactionType, _uuid string) error {
+func addTransaction(pkey string, amount int64, purpose string, date time.Time, from string, to string, typ TransactionType, _uuid string) error {
 	balance := GetBalanceInMillis() / 1000
 	if balance+amount < 0 {
 		return &BalanceError{"Amount cannot be payed out, balance to low."}
 	}
-	account.Transactions = append(account.Transactions, _transaction{Pkey: pkey, Amount: amount, Date: date, From: from, Purpose: purpose, Typ: typ, Uuid: _uuid})
+	account.Transactions = append(account.Transactions, _transaction{Pkey: pkey, Amount: amount, Date: date, From: from, To: to, Purpose: purpose, Typ: typ, Uuid: _uuid})
 	if len(account.Transactions) > 30 {
 		// create a subtotal and delete first transaction
 		account.Transactions[1].Pkey = uuid.New().String()
 		account.Transactions[1].Amount += account.Transactions[0].Amount
 		account.Transactions[1].Purpose = ""
 		account.Transactions[1].From = ""
+		account.Transactions[1].To = ""
 		account.Transactions[1].Typ = Subtotal
 		account.Transactions[1].Uuid = ""
 		account.Transactions = account.Transactions[1:]
@@ -160,7 +162,7 @@ func checkScooping() bool {
 	diff := time.Now().Sub(account.Scooping)
 	if diff.Hours() > 20 {
 		account.IsScooping = false
-		addTransaction(uuid.New().String(), calcGrowPerDay(), "", time.Now(), "", Scooped, "")
+		addTransaction(uuid.New().String(), calcGrowPerDay(), "", time.Now(), "", "", Scooped, "")
 		writeAccount()
 	}
 	return account.IsScooping

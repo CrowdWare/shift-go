@@ -15,7 +15,7 @@ func TestGetTransactions(t *testing.T) {
 	account.Transactions = append(account.Transactions, _transaction{Pkey: "", Amount: 34, Date: time.Date(2023, 1, 28, 4, 2, 45, 0, time.Local), Typ: Lmp})
 	json := GetTransactions()
 
-	if json != "[{\"Pkey\":\"\",\"Amount\":34,\"Date\":1674874965,\"From\":\"\",\"Purpose\":\"\",\"Typ\":3},{\"Pkey\":\"\",\"Amount\":34,\"Date\":1674874965,\"From\":\"\",\"Purpose\":\"\",\"Typ\":1}]" {
+	if json != "[{\"Pkey\":\"\",\"Amount\":34,\"Date\":1674874965,\"From\":\"\",\"To\":\"\",\"Purpose\":\"\",\"Typ\":3},{\"Pkey\":\"\",\"Amount\":34,\"Date\":1674874965,\"From\":\"\",\"To\":\"\",\"Purpose\":\"\",\"Typ\":1}]" {
 		t.Errorf("Not expected %s", json)
 	}
 
@@ -23,7 +23,7 @@ func TestGetTransactions(t *testing.T) {
 		account.Transactions = append(account.Transactions, _transaction{Pkey: "", Amount: 20, Date: time.Date(2023, 1, 28, 4, 2, 45, 0, time.Local), Typ: Lmp})
 	}
 	json = GetTransactions()
-	if len(json) != 2191 {
+	if len(json) != 2431 {
 		t.Errorf("Expected len to be 2191 but got %d", len(json))
 	}
 }
@@ -71,9 +71,9 @@ func TestCalculateWorth(t *testing.T) {
 func TestAddTransaction(t *testing.T) {
 	dbFile = "/tmp/shift.db"
 	account = _account{}
-	addTransaction("", 10, "Purp", time.Now(), "fr", InitialBooking, "")
+	addTransaction("", 10, "Purp", time.Now(), "fr", "to", InitialBooking, "")
 	for i := 0; i < 31; i++ {
-		addTransaction("pkey", 10, "Purp", time.Now(), "fr", Scooped, "")
+		addTransaction("pkey", 10, "Purp", time.Now(), "fr", "to", Scooped, "")
 	}
 	if len(account.Transactions) != 30 {
 		t.Errorf("Expected transaction length is 30 but got %d", len(account.Transactions))
@@ -84,7 +84,7 @@ func TestAddTransaction(t *testing.T) {
 		t.Errorf("Expected balance is 320000 but got %d", balance)
 	}
 
-	addTransaction("", 34, "Purp", time.Now(), "ssd", Lmp, "")
+	addTransaction("", 34, "Purp", time.Now(), "ssd", "to", Lmp, "")
 
 	balance = GetBalanceInMillis()
 	if balance != 354000 {
@@ -159,7 +159,7 @@ func TestGetProposalQRCode(t *testing.T) {
 func TestAcceptProposal(t *testing.T) {
 	dbFile = "/tmp/shift.db"
 	account = _account{}
-	addTransaction("pkey", 10, "", time.Now(), "", InitialBooking, "")
+	addTransaction("pkey", 10, "", time.Now(), "", "", InitialBooking, "")
 	enc := GetProposalQRCode(5, "Purpose")
 	plain := GetProposalFromQRCode(enc)
 	if plain == "FRAUD" {
@@ -217,7 +217,7 @@ func TestGetAgreementQRCode(t *testing.T) {
 func TestFullTransaction(t *testing.T) {
 	dbFile = "/tmp/shift.db"
 	account = _account{}
-	addTransaction("pkey", 20, "", time.Now(), "", InitialBooking, "")
+	addTransaction("pkey", 20, "", time.Now(), "", "", InitialBooking, "")
 	enc := GetProposalQRCode(13, "Massage")
 	GetProposalFromQRCode(enc)
 	AcceptProposal()
@@ -240,7 +240,7 @@ func TestGetAgreementQRCodeForTransaction(t *testing.T) {
 	now := time.Now()
 	dbFile = "/tmp/shift.db"
 	account = _account{}
-	addTransaction("pkey", 20, "", now, "", InitialBooking, "")
+	addTransaction("pkey", 20, "", now, "", "", InitialBooking, "")
 	enc := GetProposalQRCode(13, "Massage")
 	GetProposalFromQRCode(enc)
 	AcceptProposal()

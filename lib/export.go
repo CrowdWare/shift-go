@@ -17,6 +17,7 @@ type TransactionTO struct {
 	Amount  int64
 	Date    int64
 	From    string
+	To      string
 	Purpose string
 	Typ     int
 }
@@ -155,7 +156,7 @@ func GetTransactions() string {
 	}
 	for i := len(account.Transactions) - 1; i >= startIndex; i-- {
 		t := account.Transactions[i]
-		trans = append(trans, TransactionTO{Pkey: t.Pkey, Amount: t.Amount, Purpose: t.Purpose, Date: t.Date.Unix(), From: t.From, Typ: int(t.Typ)})
+		trans = append(trans, TransactionTO{Pkey: t.Pkey, Amount: t.Amount, Purpose: t.Purpose, Date: t.Date.Unix(), From: t.From, To: t.To, Typ: int(t.Typ)})
 	}
 	jsonData, err := json.Marshal(trans)
 	if err != nil {
@@ -171,7 +172,7 @@ func GetTransactions() string {
  */
 func AcceptProposal() string {
 	lastTransaction.Pkey = uuid.New().String()
-	err := addTransaction(lastTransaction.Pkey, lastTransaction.Amount, lastTransaction.Purpose, lastTransaction.Date, lastTransaction.From, lastTransaction.Typ, lastTransaction.Uuid)
+	err := addTransaction(lastTransaction.Pkey, lastTransaction.Amount, lastTransaction.Purpose, lastTransaction.Date, lastTransaction.From, lastTransaction.To, lastTransaction.Typ, lastTransaction.Uuid)
 	if err != nil {
 		return err.Error()
 	}
@@ -189,7 +190,7 @@ func AcceptProposal() string {
 **  On the client a QR code will be created based on that string.
  */
 func GetProposalQRCode(amount int64, purpose string) string {
-	trans := _transaction{Pkey: uuid.New().String(), Amount: amount * -1, Purpose: purpose, Date: time.Now(), Typ: Lmp, From: account.Name, Uuid: account.Uuid}
+	trans := _transaction{Pkey: uuid.New().String(), Amount: amount * -1, Purpose: purpose, Date: time.Now(), Typ: Lmp, From: account.Name, To: account.Name, Uuid: account.Uuid}
 	jsonData, err := json.Marshal(trans)
 	if err != nil {
 		if debug {
@@ -211,7 +212,7 @@ func GetProposalQRCode(amount int64, purpose string) string {
 **	On the client a QR code will be created based on that string.
  */
 func GetAgreementQRCode() string {
-	trans := _transaction{Pkey: lastTransaction.Pkey, Amount: lastTransaction.Amount * -1, Purpose: lastTransaction.Purpose, Date: lastTransaction.Date, Typ: Lmr, From: account.Name, Uuid: lastTransaction.Uuid}
+	trans := _transaction{Pkey: lastTransaction.Pkey, Amount: lastTransaction.Amount * -1, Purpose: lastTransaction.Purpose, Date: lastTransaction.Date, Typ: Lmr, From: account.Name, To: lastTransaction.To, Uuid: lastTransaction.Uuid}
 	jsonData, err := json.Marshal(trans)
 	if err != nil {
 		if debug {
@@ -251,6 +252,7 @@ func GetAgreementQRCodeForTransaction(pkey string) string {
 				trans.From = t.From
 				trans.Typ = t.Typ
 			}
+			trans.To = t.To
 			trans.Purpose = t.Purpose
 			trans.Uuid = t.Uuid
 			found = true
@@ -366,7 +368,7 @@ func GetAgreementFromQRCode(enc string) string {
 		return "NO_PURPOSE"
 	}
 	// only check error on withdraw, not on receive
-	addTransaction(lastTransaction.Pkey, lastTransaction.Amount, lastTransaction.Purpose, lastTransaction.Date, lastTransaction.From, lastTransaction.Typ, lastTransaction.Uuid)
+	addTransaction(lastTransaction.Pkey, lastTransaction.Amount, lastTransaction.Purpose, lastTransaction.Date, lastTransaction.From, lastTransaction.To, lastTransaction.Typ, lastTransaction.Uuid)
 
 	return "ok"
 }
