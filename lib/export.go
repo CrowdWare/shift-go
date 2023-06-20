@@ -417,6 +417,9 @@ func AddPeerFromQRCode(enc string) bool {
 }
 
 func GetPeerQRCode() string {
+	if peerList[0].StorjBucket == "" {
+		return ""
+	}
 	// Decode the private key from the string
 	block, _ := pem.Decode(peerList[0].CryptoKey)
 	if block == nil || block.Type != "RSA PRIVATE KEY" {
@@ -450,4 +453,12 @@ func GetPeerQRCode() string {
 		return ""
 	}
 	return encryptStringGCM(string(jsonData), false)
+}
+
+func SetStorj(bucketName string, accessKey string) bool {
+	peerList[0].StorjBucket = bucketName
+	peerList[0].StorjAccessKey = accessKey
+
+	fmt.Errorf("Permission not tested yet")
+	return false
 }

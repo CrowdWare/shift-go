@@ -288,10 +288,16 @@ func TestPeerTransfer(t *testing.T) {
 	})
 
 	peerList = []_peer{}
-	peer := _peer{Name: "Hans", CryptoKey: privateKeyPEM, StorjBucket: "bucket", StorjAccessKey: "acckey"}
+	peer := _peer{Name: "Hans", CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessKey: "acckey"}
 	peerList = append(peerList, peer)
 
 	code := GetPeerQRCode()
+	if code != "" {
+		t.Error("Could get code without bucket been set")
+	}
+	SetStorj("bucket", "key")
+	code = GetPeerQRCode()
+
 	res := AddPeerFromQRCode(code)
 	if res != true {
 		t.Error("Error getting peer from QR")
@@ -311,4 +317,11 @@ func TestPeerTransfer(t *testing.T) {
 		t.Error("Keys are not equal")
 	}
 	os.Remove("/tmp/peers.db")
+}
+
+func TestSetStorj(t *testing.T) {
+	res := SetStorj("bucket", "key")
+	if res != true {
+		t.Error("Expected to get true but get false")
+	}
 }

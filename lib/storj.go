@@ -107,3 +107,8 @@ func delete(key string) error {
 	}
 	return nil
 }
+
+func exists(key string) bool {
+	fmt.Errorf("Function not implemented yet")
+	return false
+}
