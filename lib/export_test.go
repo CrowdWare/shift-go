@@ -1,7 +1,12 @@
 package lib
 
 import (
+	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"log"
 	"os"
 	"strings"
@@ -265,4 +270,45 @@ func TestGetAgreementQRCodeForTransaction(t *testing.T) {
 		t.Errorf("Expected NOT FOUND but got %s", tokens[1])
 	}
 	os.Remove("/tmp/shift.db")
+}
+
+func TestPeerTransfer(t *testing.T) {
+	peerFile = "/tmp/peers.db"
+	account = _account{}
+	account.Name = "Hans"
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Error("Error generating key")
+	}
+	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: privateKeyBytes,
+	})
+
+	peerList = []_peer{}
+	peer := _peer{Name: "Hans", CryptoKey: privateKeyPEM, StorjBucket: "bucket", StorjAccessKey: "acckey"}
+	peerList = append(peerList, peer)
+
+	code := GetPeerQRCode()
+	res := AddPeerFromQRCode(code)
+	if res != true {
+		t.Error("Error getting peer from QR")
+	}
+	if len(peerList) != 2 {
+		t.Errorf("Expected len to be 2 but got %d", len(peerList))
+	}
+	if peerList[1].Name != "Hans" {
+		t.Errorf("Expected name to be Hans but got %s", peerList[1].Name)
+	}
+	publicKey := &privateKey.PublicKey
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		t.Error("Failed to encode public key:")
+	}
+	if !bytes.Equal(peerList[1].CryptoKey, publicKeyBytes) {
+		t.Error("Keys are not equal")
+	}
+	os.Remove("/tmp/peers.db")
 }

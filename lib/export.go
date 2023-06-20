@@ -1,7 +1,12 @@
 package lib
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
+	"fmt"
 	"log"
 	"runtime"
 	"time"
@@ -34,6 +39,7 @@ func Init(filesDir string) {
 		growLevel3 = 0
 	}
 	dbFile = filesDir + "/shift.db"
+	peerFile = filesDir + "/peers.db"
 }
 
 /*
@@ -79,7 +85,24 @@ func IsScooping() bool {
 ** 	This is only called once running the app for the first time.
  */
 func CreateAccount(name, uuid, ruuid, country, language string) int {
-	return addAccount(name, uuid, ruuid, country, language, false)
+	res := addAccount(name, uuid, ruuid, country, language, false)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		if debug {
+			fmt.Println("Failed to generate RSA key pair:", err)
+		}
+		return 1
+	}
+	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: privateKeyBytes,
+	})
+
+	localPeer := _peer{Name: name, CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessKey: ""}
+	peerList = append(peerList, localPeer)
+	writePeers()
+	return res
 }
 
 /*
@@ -371,4 +394,60 @@ func GetAgreementFromQRCode(enc string) string {
 	addTransaction(lastTransaction.Pkey, lastTransaction.Amount, lastTransaction.Purpose, lastTransaction.Date, lastTransaction.From, lastTransaction.To, lastTransaction.Typ, lastTransaction.Uuid)
 
 	return "ok"
+}
+
+func AddPeerFromQRCode(enc string) bool {
+	jsonData, err := decryptStringGCM(enc, false)
+	if err != nil {
+		if debug {
+			log.Println(err)
+		}
+		return false
+	}
+	var peer _peer
+	err = json.Unmarshal([]byte(jsonData), &peer)
+	if err != nil {
+		if debug {
+			log.Println("GetAgreementFromQRCode: error unmarshaling transaction")
+		}
+		return false
+	}
+	addPeer(peer.Name, peer.CryptoKey, peer.StorjBucket, peer.StorjAccessKey)
+	return true
+}
+
+func GetPeerQRCode() string {
+	// Decode the private key from the string
+	block, _ := pem.Decode(peerList[0].CryptoKey)
+	if block == nil || block.Type != "RSA PRIVATE KEY" {
+		if debug {
+			fmt.Println("Failed to decode private key")
+		}
+		return ""
+	}
+	// Parse the private key
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		if debug {
+			fmt.Println("Failed to parse private key:", err)
+		}
+		return ""
+	}
+
+	// Get the public key from the private key
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		fmt.Println("Failed to encode public key:", err)
+		return ""
+	}
+
+	peer := _peer{Name: account.Name, CryptoKey: publicKeyBytes, StorjBucket: peerList[0].StorjBucket, StorjAccessKey: peerList[0].StorjAccessKey}
+	jsonData, err := json.Marshal(peer)
+	if err != nil {
+		if debug {
+			log.Println(err)
+		}
+		return ""
+	}
+	return encryptStringGCM(string(jsonData), false)
 }
