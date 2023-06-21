@@ -1,5 +1,5 @@
 #!/bin/bash
-version="1.0.0"
+version="1.1.0"
 export GOOS=android
 export CGO_ENABLED=1
 export ANDROID_NDK_HOME=/Volumes/LaCie/Android/sdk/ndk/25.2.9519653

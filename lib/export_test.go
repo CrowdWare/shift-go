@@ -288,7 +288,7 @@ func TestPeerTransfer(t *testing.T) {
 	})
 
 	peerList = []_peer{}
-	peer := _peer{Name: "Hans", CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessKey: "acckey"}
+	peer := _peer{Name: "Hans", CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: "acckey"}
 	peerList = append(peerList, peer)
 
 	code := GetPeerQRCode()
@@ -320,7 +320,11 @@ func TestPeerTransfer(t *testing.T) {
 }
 
 func TestSetStorj(t *testing.T) {
-	res := SetStorj("bucket", "key")
+	key, err := decryptStringGCM(storj_access_token_enc, false)
+	if err != nil {
+		t.Error("Unable to decrypt token")
+	}
+	res := SetStorj("shift", key)
 	if res != true {
 		t.Error("Expected to get true but get false")
 	}

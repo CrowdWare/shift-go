@@ -1,8 +1,6 @@
 package lib
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -40,6 +38,9 @@ func Init(filesDir string) {
 	}
 	dbFile = filesDir + "/shift.db"
 	peerFile = filesDir + "/peers.db"
+	if !readPeers() {
+		createPeer()
+	}
 }
 
 /*
@@ -86,23 +87,8 @@ func IsScooping() bool {
  */
 func CreateAccount(name, uuid, ruuid, country, language string) int {
 	res := addAccount(name, uuid, ruuid, country, language, false)
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		if debug {
-			fmt.Println("Failed to generate RSA key pair:", err)
-		}
-		return 1
-	}
-	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
-	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: privateKeyBytes,
-	})
-
-	localPeer := _peer{Name: name, CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessKey: ""}
-	peerList = append(peerList, localPeer)
-	writePeers()
-	return res
+	cp := createPeer()
+	return res + cp
 }
 
 /*
@@ -110,6 +96,12 @@ func CreateAccount(name, uuid, ruuid, country, language string) int {
  */
 func GetMatelist() string {
 	list := getMatelist(false)
+
+	for i, t := range peerList {
+		if i != 0 {
+			list = append(list, Friend{Name: t.Name})
+		}
+	}
 	jsonData, err := json.Marshal(list)
 	if err != nil {
 		return ""
@@ -412,11 +404,17 @@ func AddPeerFromQRCode(enc string) bool {
 		}
 		return false
 	}
-	addPeer(peer.Name, peer.CryptoKey, peer.StorjBucket, peer.StorjAccessKey)
+	addPeer(peer.Name, peer.CryptoKey, peer.StorjBucket, peer.StorjAccessToken)
 	return true
 }
 
 func GetPeerQRCode() string {
+	if len(peerList) == 0 {
+		cp := createPeer()
+		if cp != 0 {
+			return ""
+		}
+	}
 	if peerList[0].StorjBucket == "" {
 		return ""
 	}
@@ -444,7 +442,7 @@ func GetPeerQRCode() string {
 		return ""
 	}
 
-	peer := _peer{Name: account.Name, CryptoKey: publicKeyBytes, StorjBucket: peerList[0].StorjBucket, StorjAccessKey: peerList[0].StorjAccessKey}
+	peer := _peer{Name: account.Name, CryptoKey: publicKeyBytes, StorjBucket: peerList[0].StorjBucket, StorjAccessToken: peerList[0].StorjAccessToken}
 	jsonData, err := json.Marshal(peer)
 	if err != nil {
 		if debug {
@@ -456,9 +454,25 @@ func GetPeerQRCode() string {
 }
 
 func SetStorj(bucketName string, accessKey string) bool {
+	if bucketName == "" || accessKey == "" {
+		return false
+	}
 	peerList[0].StorjBucket = bucketName
-	peerList[0].StorjAccessKey = accessKey
+	peerList[0].StorjAccessToken = accessKey
+	writePeers()
+	return true
+}
 
-	fmt.Errorf("Permission not tested yet")
-	return false
+func GetBucketName() string {
+	if len(peerList) > 0 {
+		return peerList[0].StorjBucket
+	}
+	return ""
+}
+
+func GetAccessToken() string {
+	if len(peerList) > 0 {
+		return peerList[0].StorjAccessToken
+	}
+	return ""
 }

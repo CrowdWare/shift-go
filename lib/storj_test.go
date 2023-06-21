@@ -28,8 +28,24 @@ func TestStorj(t *testing.T) {
 		t.Error("Storj buffers are not identical")
 	}
 
+	res, err := exists("foo/bar/baz")
+	if err != nil {
+		t.Errorf("exists failed: " + err.Error())
+	}
+	if res != true {
+		t.Error("exists returned false")
+	}
+
 	err = delete("foo/bar/baz")
 	if err != nil {
 		t.Errorf("delete failed: " + err.Error())
+	}
+
+	res, err = exists("foo/bar/baz2")
+	if err == nil {
+		t.Errorf("exists failed: " + err.Error())
+	}
+	if res != false {
+		t.Error("exists returned true")
 	}
 }

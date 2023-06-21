@@ -2,21 +2,46 @@ package lib
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/gob"
+	"encoding/pem"
+	"fmt"
 	"log"
 )
 
 var peerList []_peer
 
 type _peer struct {
-	Name           string
-	CryptoKey      []byte // first peer in the list is local and a private key, for all others its a public key
-	StorjBucket    string
-	StorjAccessKey string
+	Name             string
+	CryptoKey        []byte // first peer in the list is local and a private key, for all others its a public key
+	StorjBucket      string
+	StorjAccessToken string
 }
 
-func addPeer(name string, publicKey []byte, storjBucket string, storjAccessKey string) {
-	peer := _peer{Name: name, CryptoKey: publicKey, StorjBucket: storjBucket, StorjAccessKey: storjAccessKey}
+func createPeer() int {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		if debug {
+			fmt.Println("Failed to generate RSA key pair:", err)
+		}
+		return 1
+	}
+	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: privateKeyBytes,
+	})
+
+	localPeer := _peer{Name: account.Name, CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: ""}
+	peerList = append(peerList, localPeer)
+	writePeers()
+	return 0
+}
+
+func addPeer(name string, publicKey []byte, storjBucket string, storjAccessToken string) {
+	peer := _peer{Name: name, CryptoKey: publicKey, StorjBucket: storjBucket, StorjAccessToken: storjAccessToken}
 	peerList = append(peerList, peer)
 	writePeers()
 }

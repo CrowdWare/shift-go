@@ -10,7 +10,7 @@ import (
 
 func TestPeerSerialize(t *testing.T) {
 	var peerlist []_peer
-	peer := _peer{Name: "Hans", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessKey: "acckey"}
+	peer := _peer{Name: "Hans", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
 	peerlist = append(peerlist, peer)
 	var buffer bytes.Buffer
 
@@ -33,7 +33,7 @@ func TestPeerSerialize(t *testing.T) {
 func TestReadWritePeers(t *testing.T) {
 	peerFile = "/tmp/peers.db"
 	peerList = []_peer{}
-	peer := _peer{Name: "Hans", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessKey: "acckey"}
+	peer := _peer{Name: "Hans", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
 	peerList = append(peerList, peer)
 	writePeers()
 

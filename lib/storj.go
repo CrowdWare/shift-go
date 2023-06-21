@@ -108,7 +108,21 @@ func delete(key string) error {
 	return nil
 }
 
-func exists(key string) bool {
-	fmt.Errorf("Function not implemented yet")
-	return false
+func exists(key string) (bool, error) {
+	project, err := uplink.OpenProject(ctx, access)
+	if err != nil {
+		return false, fmt.Errorf("could not open project: %v", err)
+	}
+	defer project.Close()
+
+	_, err = project.EnsureBucket(ctx, bucketName)
+	if err != nil {
+		return false, fmt.Errorf("could not ensure bucket: %v", err)
+	}
+	info, err := project.StatObject(ctx, bucketName, key)
+	if err != nil {
+		return false, fmt.Errorf("could not get info: %v", err)
+	}
+	log.Println(info)
+	return info.System.ContentLength > 0, nil
 }
