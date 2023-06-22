@@ -10,7 +10,7 @@ import (
 
 func TestPeerSerialize(t *testing.T) {
 	var peerlist []_peer
-	peer := _peer{Name: "Hans", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
+	peer := _peer{Uuid: "1234", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
 	peerlist = append(peerlist, peer)
 	var buffer bytes.Buffer
 
@@ -33,7 +33,7 @@ func TestPeerSerialize(t *testing.T) {
 func TestReadWritePeers(t *testing.T) {
 	peerFile = "/tmp/peers.db"
 	peerList = []_peer{}
-	peer := _peer{Name: "Hans", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
+	peer := _peer{Uuid: "1234", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
 	peerList = append(peerList, peer)
 	writePeers()
 
@@ -55,8 +55,8 @@ func TestReadWritePeers(t *testing.T) {
 		t.Errorf("Expected peercount to be 1 but got %d", len(peerList))
 	}
 
-	if peerList[0].Name != "Hans" {
-		t.Errorf("Expected peer name to be Hans but got %s", peerList[0].Name)
+	if peerList[0].Uuid != "1234" {
+		t.Errorf("Expected peer 1234 to be Hans but got %s", peerList[0].Uuid)
 	}
 
 	os.Remove("/tmp/peers.db")

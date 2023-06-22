@@ -96,10 +96,12 @@ func CreateAccount(name, uuid, ruuid, country, language string) int {
  */
 func GetMatelist() string {
 	list := getMatelist(false)
-
-	for i, t := range peerList {
-		if i != 0 {
-			list = append(list, Friend{Name: t.Name})
+	for _, p := range peerList {
+		index := contains(list, p.Uuid)
+		if index > 0 {
+			list[index].HasPeerData = true
+		} else {
+			list = append(list, Friend{Name: p.Name, Uuid: p.Uuid, HasPeerData: true})
 		}
 	}
 	jsonData, err := json.Marshal(list)
@@ -404,7 +406,7 @@ func AddPeerFromQRCode(enc string) bool {
 		}
 		return false
 	}
-	addPeer(peer.Name, peer.CryptoKey, peer.StorjBucket, peer.StorjAccessToken)
+	addPeer(peer.Name, peer.Uuid, peer.CryptoKey, peer.StorjBucket, peer.StorjAccessToken)
 	return true
 }
 
@@ -442,7 +444,7 @@ func GetPeerQRCode() string {
 		return ""
 	}
 
-	peer := _peer{Name: account.Name, CryptoKey: publicKeyBytes, StorjBucket: peerList[0].StorjBucket, StorjAccessToken: peerList[0].StorjAccessToken}
+	peer := _peer{Name: account.Name, Uuid: account.Uuid, CryptoKey: publicKeyBytes, StorjBucket: peerList[0].StorjBucket, StorjAccessToken: peerList[0].StorjAccessToken}
 	jsonData, err := json.Marshal(peer)
 	if err != nil {
 		if debug {

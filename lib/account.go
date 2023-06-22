@@ -28,6 +28,7 @@ type Friend struct {
 	Uuid         string
 	Country      string
 	FriendsCount int
+	HasPeerData  bool
 }
 
 type _account struct {

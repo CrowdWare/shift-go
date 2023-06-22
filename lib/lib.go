@@ -29,3 +29,12 @@ func Encrypt(value string) string {
 func Decrypt(enc string) (string, error) {
 	return decryptStringGCM(enc, false)
 }
+
+func contains(list []Friend, uuid string) int {
+	for index, item := range list {
+		if item.Uuid == uuid {
+			return index
+		}
+	}
+	return -1
+}

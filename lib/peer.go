@@ -15,6 +15,7 @@ var peerList []_peer
 
 type _peer struct {
 	Name             string
+	Uuid             string
 	CryptoKey        []byte // first peer in the list is local and a private key, for all others its a public key
 	StorjBucket      string
 	StorjAccessToken string
@@ -34,14 +35,14 @@ func createPeer() int {
 		Bytes: privateKeyBytes,
 	})
 
-	localPeer := _peer{Name: account.Name, CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: ""}
+	localPeer := _peer{Name: account.Name, Uuid: account.Uuid, CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: ""}
 	peerList = append(peerList, localPeer)
 	writePeers()
 	return 0
 }
 
-func addPeer(name string, publicKey []byte, storjBucket string, storjAccessToken string) {
-	peer := _peer{Name: name, CryptoKey: publicKey, StorjBucket: storjBucket, StorjAccessToken: storjAccessToken}
+func addPeer(name string, uuid string, publicKey []byte, storjBucket string, storjAccessToken string) {
+	peer := _peer{Uuid: uuid, CryptoKey: publicKey, StorjBucket: storjBucket, StorjAccessToken: storjAccessToken}
 	peerList = append(peerList, peer)
 	writePeers()
 }

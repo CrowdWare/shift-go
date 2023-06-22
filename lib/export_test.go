@@ -275,7 +275,7 @@ func TestGetAgreementQRCodeForTransaction(t *testing.T) {
 func TestPeerTransfer(t *testing.T) {
 	peerFile = "/tmp/peers.db"
 	account = _account{}
-	account.Name = "Hans"
+	account.Uuid = "1234"
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -288,7 +288,7 @@ func TestPeerTransfer(t *testing.T) {
 	})
 
 	peerList = []_peer{}
-	peer := _peer{Name: "Hans", CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: "acckey"}
+	peer := _peer{Uuid: "1234", CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: "acckey"}
 	peerList = append(peerList, peer)
 
 	code := GetPeerQRCode()
@@ -305,8 +305,8 @@ func TestPeerTransfer(t *testing.T) {
 	if len(peerList) != 2 {
 		t.Errorf("Expected len to be 2 but got %d", len(peerList))
 	}
-	if peerList[1].Name != "Hans" {
-		t.Errorf("Expected name to be Hans but got %s", peerList[1].Name)
+	if peerList[1].Uuid != "1234" {
+		t.Errorf("Expected name to be 1234 but got %s", peerList[1].Uuid)
 	}
 	publicKey := &privateKey.PublicKey
 	publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
