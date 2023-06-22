@@ -504,6 +504,9 @@ func GetAccessToken() string {
 **	Puts an encrypted message on the Storj bucket from the peer
  */
 func SendMessageToPeer(peerUuid string, message string) string {
+	if debug {
+		log.Println("SendMessageToPeer has been called ")
+	}
 	peer := -1
 	for i, p := range peerList {
 		if p.Uuid == peerUuid {

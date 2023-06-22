@@ -3,7 +3,10 @@ package lib
 import (
 	"io/ioutil"
 	"os"
+	"sync"
 )
+
+var mutex = &sync.Mutex{} // Create a mutex lock
 
 func fileExists(filePath string) bool {
 	_, err := os.Stat(filePath)
@@ -17,6 +20,9 @@ func fileExists(filePath string) bool {
 }
 
 func writeFile(filename string, content []byte) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	tempFilePath := filename + ".temp"
 	ciphertext, nonce, err := encryptBytesGCM(content)
 	if err != nil {
@@ -53,6 +59,9 @@ func writeFile(filename string, content []byte) error {
 }
 
 func readFile(filename string) ([]byte, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	contentWithNonce, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
