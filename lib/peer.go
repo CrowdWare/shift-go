@@ -42,8 +42,21 @@ func createPeer() int {
 }
 
 func addPeer(name string, uuid string, publicKey []byte, storjBucket string, storjAccessToken string) {
-	peer := _peer{Uuid: uuid, CryptoKey: publicKey, StorjBucket: storjBucket, StorjAccessToken: storjAccessToken}
-	peerList = append(peerList, peer)
+	peer := -1
+	for i, p := range peerList {
+		if p.Uuid == uuid {
+			peer = i
+		}
+	}
+	if peer > 0 {
+		// peer already exist, so update it
+		peerList[peer].CryptoKey = publicKey
+		peerList[peer].StorjBucket = storjBucket
+		peerList[peer].StorjAccessToken = storjAccessToken
+	} else {
+		// append peer
+		peerList = append(peerList, _peer{Uuid: uuid, CryptoKey: publicKey, StorjBucket: storjBucket, StorjAccessToken: storjAccessToken})
+	}
 	writePeers()
 }
 

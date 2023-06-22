@@ -3,7 +3,6 @@ package lib
 import (
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -11,27 +10,7 @@ import (
 	"storj.io/uplink"
 )
 
-var access *uplink.Access
-var project *uplink.Project
-var ctx context.Context
-
-const bucketName = "shift"
-
-func initStorj(context context.Context) error {
-	ctx = context
-	plain, err := decryptStringGCM(storj_access_token_enc, false)
-	if err != nil {
-		if debug {
-			log.Println("Error decrypt storj access token: " + err.Error())
-		}
-		return err
-	}
-	accessGrant := flag.String("access", plain, "access grant from satellite")
-	access, err = uplink.ParseAccess(*accessGrant)
-	return err
-}
-
-func put(key string, dataToUpload []byte) error {
+func put(key string, dataToUpload []byte, bucketName string, ctx context.Context, access *uplink.Access) error {
 	project, err := uplink.OpenProject(ctx, access)
 	if err != nil {
 		return fmt.Errorf("could not open project: %v", err)
@@ -62,7 +41,7 @@ func put(key string, dataToUpload []byte) error {
 	return nil
 }
 
-func get(key string) ([]byte, error) {
+func get(key string, bucketName string, ctx context.Context, access *uplink.Access) ([]byte, error) {
 	empty := make([]byte, 0)
 
 	project, err := uplink.OpenProject(ctx, access)
@@ -89,7 +68,7 @@ func get(key string) ([]byte, error) {
 	return receivedContents, nil
 }
 
-func delete(key string) error {
+func delete(key string, bucketName string, ctx context.Context, access *uplink.Access) error {
 	project, err := uplink.OpenProject(ctx, access)
 	if err != nil {
 		return fmt.Errorf("could not open project: %v", err)
@@ -108,7 +87,7 @@ func delete(key string) error {
 	return nil
 }
 
-func exists(key string) (bool, error) {
+func exists(key string, bucketName string, ctx context.Context, access *uplink.Access) (bool, error) {
 	project, err := uplink.OpenProject(ctx, access)
 	if err != nil {
 		return false, fmt.Errorf("could not open project: %v", err)
@@ -125,4 +104,39 @@ func exists(key string) (bool, error) {
 	}
 	log.Println(info)
 	return info.System.ContentLength > 0, nil
+}
+
+func listObjects(bucketName string, path string, ctx context.Context, access *uplink.Access) ([]string, error) {
+	project, err := uplink.OpenProject(ctx, access)
+	if err != nil {
+		return nil, err
+	}
+
+	defer project.Close()
+
+	// Ensure the bucket exists
+	_, err = project.EnsureBucket(ctx, bucketName)
+	if err != nil {
+		return nil, err
+	}
+
+	// List objects in the specified path
+	objects := project.ListObjects(ctx, bucketName, &uplink.ListObjectsOptions{
+		Prefix:    path,
+		Recursive: false,
+	})
+
+	var itemKeys []string
+	for objects.Next() {
+		item := objects.Item()
+		if !item.IsPrefix {
+			itemKeys = append(itemKeys, item.Key)
+		}
+	}
+
+	if err := objects.Err(); err != nil {
+		return nil, err
+	}
+
+	return itemKeys, nil
 }

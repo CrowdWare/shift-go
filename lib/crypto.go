@@ -4,7 +4,11 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/hex"
+	"encoding/pem"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -186,4 +190,51 @@ func decryptBytesGCM(ciphertext, nonce []byte) ([]byte, error) {
 	}
 
 	return plainbytes, nil
+}
+
+func encryptString(publicKeyBytes []byte, plainText string) ([]byte, error) {
+	// Retrieve the public key from bytes
+	parsedPublicKey, err := x509.ParsePKIXPublicKey(publicKeyBytes)
+	if err != nil {
+		if debug {
+			log.Println("Error parsing PKIXPub, " + err.Error())
+		}
+		return nil, err
+	}
+
+	// Convert the parsed public key to the correct type
+	retrievedPublicKey := parsedPublicKey.(*rsa.PublicKey)
+
+	// Encrypt the plaintext using the public key
+	ciphertext, err := rsa.EncryptPKCS1v15(rand.Reader, retrievedPublicKey, []byte(plainText))
+	if err != nil {
+		if debug {
+			log.Println("Error encryptPKCS" + err.Error())
+		}
+		return nil, err
+	}
+	return ciphertext, nil
+}
+
+func decryptString(privateKeyBytes []byte, ciphertext []byte) (string, error) {
+	// Parse the private key from bytes
+	block, _ := pem.Decode(privateKeyBytes)
+	if block == nil || block.Type != "RSA PRIVATE KEY" {
+		return "", fmt.Errorf("Failed to decode PEM block containing private key")
+	}
+
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	// Decrypt the ciphertext using the private key
+	decryptedText, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, ciphertext)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	return string(decryptedText), nil
 }

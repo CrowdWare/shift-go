@@ -2,16 +2,20 @@ package lib
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"flag"
 	"log"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"storj.io/uplink"
 )
 
 func TestGetTransactions(t *testing.T) {
@@ -328,4 +332,78 @@ func TestSetStorj(t *testing.T) {
 	if res != true {
 		t.Error("Expected to get true but get false")
 	}
+}
+
+func TestSendMessageToPeer(t *testing.T) {
+	accessToken := "1GW7L5Hab3vR4twJARK4mMuatA2D319NyYboQXnRQU9JcLDj2BEwwtiZ5whRtwDV4KRPvsfV4HcSjq9DutvF2NLr6yMgij6N6debnCzeLEfPZJds2uLtj4PcQHPXUyzqStdxwTAZrMDJX4RQcvdpqAtbRUVxtbrkg7hRCrjgwTFNCAoATvfeeoXacMkUBMSxpNXLfp3NYWk9KjGgbRC9SkFHDurkrHg8aVs1mMs2vRqW2Y1mcHbpzYthWJxfJB1sQP1shfRyCUZxTY4okb5gnZH3tSSyCPSsSkbLh6KSYnVrb2bqRAr1AgvfQVaB"
+	privateKey1, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Error("Failed to generate RSA key pair:", err.Error())
+	}
+	privateKeyBytes1 := x509.MarshalPKCS1PrivateKey(privateKey1)
+	privateKeyPEM1 := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: privateKeyBytes1,
+	})
+
+	privateKey2, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Error("Failed to generate RSA key pair:", err.Error())
+	}
+	privateKeyBytes2 := x509.MarshalPKCS1PrivateKey(privateKey2)
+	privateKeyPEM2 := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: privateKeyBytes2,
+	})
+
+	// Get the public key from the private key
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey2.PublicKey)
+	if err != nil {
+		t.Error("Failed to encode public key:", err)
+		return
+	}
+
+	peerList = append(peerList, _peer{Name: "Art", Uuid: "1234", CryptoKey: privateKeyPEM1, StorjBucket: "shift", StorjAccessToken: accessToken})
+	peerList = append(peerList, _peer{Name: "Testuser", Uuid: "2345", CryptoKey: publicKeyBytes, StorjBucket: "shift", StorjAccessToken: accessToken})
+
+	// test sending a message
+	messageKey := SendMessageToPeer("2345", "This is a test message.")
+	if len(messageKey) == 1 {
+		t.Errorf("Expected res to be a key but got %s", messageKey)
+	}
+	accessGrant := flag.String("access2", accessToken, "access grant from satellite")
+	access, err := uplink.ParseAccess(*accessGrant)
+	if err != nil {
+		t.Error("error parsing token")
+	}
+	defer deleteMessage(messageKey, access)
+
+	// now we have to switch sites to the getters account
+	peerList[0].CryptoKey = privateKeyPEM2
+
+	// test getting a list of keys
+	res := GetMessagesfromPeer("1234")
+	if len(res) == 0 {
+		t.Errorf("Got an error getting messages %s", res)
+		return
+	}
+	keys := strings.Split(res, ",")
+	if len(keys) != 1 {
+		t.Errorf("Expected to get one key but got %d", len(keys))
+		return
+	}
+
+	// test getting decrypted message
+	plainText := GetPeerMessage("1234", keys[0])
+	if len(plainText) == 1 {
+		t.Errorf("Got an error getting a message %s", plainText)
+		return
+	}
+	if plainText != "0,This is a test message." {
+		t.Errorf("Expected to get same message back, but got %s", plainText)
+	}
+}
+
+func deleteMessage(messageKey string, access *uplink.Access) {
+	delete(messageKey, "shift", context.Background(), access)
 }

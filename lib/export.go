@@ -1,15 +1,19 @@
 package lib
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"flag"
 	"fmt"
 	"log"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"storj.io/uplink"
 )
 
 /*
@@ -93,6 +97,8 @@ func CreateAccount(name, uuid, ruuid, country, language string) int {
 
 /*
 **	Get a list of all mates from rest service, pack them into json and return the json string.
+**	We are also adding the user from the peerlist. These are the users with whom we exchanged
+**	Our public key and storj access with.
  */
 func GetMatelist() string {
 	list := getMatelist(false)
@@ -390,6 +396,9 @@ func GetAgreementFromQRCode(enc string) string {
 	return "ok"
 }
 
+/*
+**	Decrypt the QR-Code, unmarshalls the peer and add it to the peer list
+ */
 func AddPeerFromQRCode(enc string) bool {
 	jsonData, err := decryptStringGCM(enc, false)
 	if err != nil {
@@ -410,6 +419,9 @@ func AddPeerFromQRCode(enc string) bool {
 	return true
 }
 
+/*
+**	Returns an encrypted record of the first Peer
+ */
 func GetPeerQRCode() string {
 	if len(peerList) == 0 {
 		cp := createPeer()
@@ -455,6 +467,9 @@ func GetPeerQRCode() string {
 	return encryptStringGCM(string(jsonData), false)
 }
 
+/*
+**	Saves the Storj Data
+ */
 func SetStorj(bucketName string, accessKey string) bool {
 	if bucketName == "" || accessKey == "" {
 		return false
@@ -465,6 +480,9 @@ func SetStorj(bucketName string, accessKey string) bool {
 	return true
 }
 
+/*
+**	Returns the Storj Bucketname
+ */
 func GetBucketName() string {
 	if len(peerList) > 0 {
 		return peerList[0].StorjBucket
@@ -472,9 +490,109 @@ func GetBucketName() string {
 	return ""
 }
 
+/*
+**	Return the Storj Access Token
+ */
 func GetAccessToken() string {
 	if len(peerList) > 0 {
 		return peerList[0].StorjAccessToken
 	}
 	return ""
+}
+
+/*
+**	Puts an encrypted message on the Storj bucket from the peer
+ */
+func SendMessageToPeer(peerUuid string, message string) string {
+	peer := -1
+	for i, p := range peerList {
+		if p.Uuid == peerUuid {
+			peer = i
+		}
+	}
+	if peer == -1 {
+		return "1"
+	}
+	ctx := context.Background()
+	accessGrant := flag.String("accessSend", peerList[peer].StorjAccessToken, "access grant from satellite")
+	access, err := uplink.ParseAccess(*accessGrant)
+	if err != nil {
+		if debug {
+			log.Printf("parse access failed %s", err.Error())
+		}
+		return "2"
+	}
+
+	cipherText, err := encryptString(peerList[peer].CryptoKey, message)
+	if err != nil {
+		if debug {
+			log.Println("error encryting the message: " + err.Error())
+		}
+		return "3"
+	}
+
+	messageKey := "shift/messages/" + peerList[0].Uuid + "/" + uuid.NewString()
+	err = put(messageKey, cipherText, peerList[peer].StorjBucket, ctx, access)
+	if err != nil {
+		if debug {
+			log.Println("put failed: " + err.Error())
+		}
+		return "4"
+	}
+	return messageKey
+}
+
+/*
+**	Returns a comma separated list of keys. These keys can be used to "get" a message from Storj
+ */
+func GetMessagesfromPeer(peerUuid string) string {
+	ctx := context.Background()
+	accessGrant := flag.String("accessList", peerList[0].StorjAccessToken, "access grant from satellite")
+	access, err := uplink.ParseAccess(*accessGrant)
+	if err != nil {
+		if debug {
+			log.Printf("parse access failed %s", err.Error())
+		}
+		return "1"
+	}
+	keys, err := listObjects(peerList[0].StorjBucket, "shift/messages/"+peerUuid+"/", ctx, access)
+	if err != nil {
+		if debug {
+			log.Printf("list oebjects failed %s", err.Error())
+		}
+		return "2"
+	}
+
+	return strings.Join(keys, ",")
+}
+
+/*
+**	Gets the message from Storj and returns it decrypted
+ */
+func GetPeerMessage(peerUuid, key string) string {
+	ctx := context.Background()
+	accessGrant := flag.String("accessGet", peerList[0].StorjAccessToken, "access grant from satellite")
+	access, err := uplink.ParseAccess(*accessGrant)
+	if err != nil {
+		if debug {
+			log.Printf("parse access failed %s", err.Error())
+		}
+		return "1"
+	}
+	ciphertext, err := get(key, peerList[0].StorjBucket, ctx, access)
+	if err != nil {
+		if debug {
+			log.Printf("get failed %s", err.Error())
+		}
+		return "2"
+	}
+
+	plaintext, err := decryptString(peerList[0].CryptoKey, ciphertext)
+	if err != nil {
+		if debug {
+			log.Printf("decrypt failed %s", err.Error())
+		}
+		return "3"
+	}
+	return "0," + plaintext
 }
