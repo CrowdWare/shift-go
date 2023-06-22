@@ -324,11 +324,9 @@ func TestPeerTransfer(t *testing.T) {
 }
 
 func TestSetStorj(t *testing.T) {
-	key, err := decryptStringGCM(storj_access_token_enc, false)
-	if err != nil {
-		t.Error("Unable to decrypt token")
-	}
-	res := SetStorj("shift", key)
+	peerList = append(peerList, _peer{Name: "Art", Uuid: "1234", CryptoKey: []byte(""), StorjBucket: "shift", StorjAccessToken: ""})
+
+	res := SetStorj("shift", "key")
 	if res != true {
 		t.Error("Expected to get true but get false")
 	}
@@ -362,7 +360,7 @@ func TestSendMessageToPeer(t *testing.T) {
 		t.Error("Failed to encode public key:", err)
 		return
 	}
-
+	peerList = []_peer{}
 	peerList = append(peerList, _peer{Name: "Art", Uuid: "1234", CryptoKey: privateKeyPEM1, StorjBucket: "shift", StorjAccessToken: accessToken})
 	peerList = append(peerList, _peer{Name: "Testuser", Uuid: "2345", CryptoKey: publicKeyBytes, StorjBucket: "shift", StorjAccessToken: accessToken})
 
