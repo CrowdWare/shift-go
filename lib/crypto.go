@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func generateSecretKey(db bool, read bool) ([]byte, error) {
+func generateSecretKey(db bool, read bool, fileName string) ([]byte, error) {
 	var variable1 = int64(var1)
 	var variable2 = int64(var2)
 	var variable3 = int64(var3)
@@ -24,7 +24,7 @@ func generateSecretKey(db bool, read bool) ([]byte, error) {
 	// Check if the file exists
 	if db {
 		variable3 = int64(time.Now().Day())
-		fileInfo, err := os.Stat(dbFile)
+		fileInfo, err := os.Stat(fileName)
 		if read && err == nil {
 			modTime := fileInfo.ModTime()
 			variable3 = int64(modTime.Day())
@@ -62,7 +62,7 @@ func encryptStringGCM(value string, webservice bool) string {
 		secret_key, err = decryptStringGCM(secret_key_enc, false)
 		key = []byte(secret_key)
 	} else {
-		key, err = generateSecretKey(false, false)
+		key, err = generateSecretKey(false, false, "")
 		if err != nil {
 			if debug {
 				log.Println(err)
@@ -99,8 +99,8 @@ func encryptStringGCM(value string, webservice bool) string {
 	return hex.EncodeToString(ciphertext)
 }
 
-func encryptBytesGCM(plaintext []byte) ([]byte, []byte, error) {
-	key, err := generateSecretKey(true, false)
+func encryptBytesGCM(plaintext []byte, fileName string) ([]byte, []byte, error) {
+	key, err := generateSecretKey(true, false, fileName)
 	if err != nil {
 		if debug {
 			log.Println("generateSecretKey" + err.Error())
@@ -136,7 +136,7 @@ func decryptStringGCM(value string, webservice bool) (string, error) {
 		secret_key, err = decryptStringGCM(secret_key_enc, false)
 		key = []byte(secret_key)
 	} else {
-		key, err = generateSecretKey(false, false)
+		key, err = generateSecretKey(false, false, "")
 		if err != nil {
 			return "", err
 		}
@@ -166,8 +166,8 @@ func decryptStringGCM(value string, webservice bool) (string, error) {
 	return string(plaintext), nil
 }
 
-func decryptBytesGCM(ciphertext, nonce []byte) ([]byte, error) {
-	key, err := generateSecretKey(true, true)
+func decryptBytesGCM(ciphertext, nonce []byte, fileName string) ([]byte, error) {
+	key, err := generateSecretKey(true, true, fileName)
 	if err != nil {
 		if debug {
 			log.Println(err)

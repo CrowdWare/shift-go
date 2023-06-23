@@ -38,13 +38,13 @@ func TestEncryptAndDecryptBytesGCM(t *testing.T) {
 	plaintext := []byte("Hello, World!")
 	dbFile = "/tmp/shift.db"
 	// Encrypt the plaintext
-	ciphertext, nonce, err := encryptBytesGCM(plaintext)
+	ciphertext, nonce, err := encryptBytesGCM(plaintext, dbFile)
 	if err != nil {
 		t.Errorf("Encryption error: %v", err)
 	}
 
 	// Decrypt the ciphertext
-	decrypted, err := decryptBytesGCM(ciphertext, nonce)
+	decrypted, err := decryptBytesGCM(ciphertext, nonce, dbFile)
 	if err != nil {
 		t.Errorf("Decryption error: %v", err)
 	}
@@ -59,13 +59,13 @@ func TestEncryptAndDecryptBytesGCMWithBinaryData(t *testing.T) {
 	plaintext := []byte{0x01, 0x02, 0x03, 0x04, 0x05}
 	dbFile = "/tmp/shift.db"
 	// Encrypt the plaintext
-	ciphertext, nonce, err := encryptBytesGCM(plaintext)
+	ciphertext, nonce, err := encryptBytesGCM(plaintext, dbFile)
 	if err != nil {
 		t.Errorf("Encryption error: %v", err)
 	}
 
 	// Decrypt the ciphertext
-	decrypted, err := decryptBytesGCM(ciphertext, nonce)
+	decrypted, err := decryptBytesGCM(ciphertext, nonce, dbFile)
 	if err != nil {
 		t.Errorf("Decryption error: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestEncryptAndDecryptBytesGCMWithHexInput(t *testing.T) {
 	plaintext := []byte("Hello, World!")
 	dbFile = "/tmp/shift.db"
 	// Encrypt the plaintext
-	ciphertext, nonce, err := encryptBytesGCM(plaintext)
+	ciphertext, nonce, err := encryptBytesGCM(plaintext, dbFile)
 	if err != nil {
 		t.Errorf("Encryption error: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestEncryptAndDecryptBytesGCMWithHexInput(t *testing.T) {
 	}
 
 	// Decrypt the decoded ciphertext
-	decrypted, err := decryptBytesGCM(decodedCiphertext, decodedNonce)
+	decrypted, err := decryptBytesGCM(decodedCiphertext, decodedNonce, dbFile)
 	if err != nil {
 		t.Errorf("Decryption error: %v", err)
 	}

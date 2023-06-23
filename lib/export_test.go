@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"flag"
 	"log"
 	"os"
 	"strings"
@@ -278,7 +277,7 @@ func TestGetAgreementQRCodeForTransaction(t *testing.T) {
 
 func TestPeerTransfer(t *testing.T) {
 	peerFile = "/tmp/peers.db"
-	account = _account{}
+	account = _account{Name: "Hans"}
 	account.Uuid = "1234"
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -292,13 +291,14 @@ func TestPeerTransfer(t *testing.T) {
 	})
 
 	peerList = []_peer{}
-	peer := _peer{Uuid: "1234", CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: "acckey"}
+	peer := _peer{Name: "Hans", Uuid: "1234", CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: "acckey"}
 	peerList = append(peerList, peer)
 
 	code := GetPeerQRCode()
 	if code != "" {
 		t.Error("Could get code without bucket been set")
 	}
+
 	SetStorj("bucket", "key")
 	code = GetPeerQRCode()
 
@@ -310,7 +310,11 @@ func TestPeerTransfer(t *testing.T) {
 		t.Errorf("Expected len to be 2 but got %d", len(peerList))
 	}
 	if peerList[1].Uuid != "1234" {
-		t.Errorf("Expected name to be 1234 but got %s", peerList[1].Uuid)
+		t.Errorf("Expected uuid to be 1234 but got %s", peerList[1].Uuid)
+	}
+
+	if peerList[1].Name != "Hans" {
+		t.Errorf("Expected name to be Hans but got %s", peerList[1].Name)
 	}
 	publicKey := &privateKey.PublicKey
 	publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
@@ -360,6 +364,7 @@ func TestSendMessageToPeer(t *testing.T) {
 		t.Error("Failed to encode public key:", err)
 		return
 	}
+	account.Uuid = "1234"
 	peerList = []_peer{}
 	peerList = append(peerList, _peer{Name: "Art", Uuid: "1234", CryptoKey: privateKeyPEM1, StorjBucket: "shift", StorjAccessToken: accessToken})
 	peerList = append(peerList, _peer{Name: "Testuser", Uuid: "2345", CryptoKey: publicKeyBytes, StorjBucket: "shift", StorjAccessToken: accessToken})
@@ -369,8 +374,8 @@ func TestSendMessageToPeer(t *testing.T) {
 	if len(messageKey) == 1 {
 		t.Errorf("Expected res to be a key but got %s", messageKey)
 	}
-	accessGrant := flag.String("access2", accessToken, "access grant from satellite")
-	access, err := uplink.ParseAccess(*accessGrant)
+
+	access, err := uplink.ParseAccess(accessToken)
 	if err != nil {
 		t.Error("error parsing token")
 	}
@@ -400,8 +405,31 @@ func TestSendMessageToPeer(t *testing.T) {
 	if plainText != "0,This is a test message." {
 		t.Errorf("Expected to get same message back, but got %s", plainText)
 	}
+
+	res = DoesPeerMessageExist("1234", keys[0])
+	if res != "true" {
+		t.Errorf("Message does not exist")
+	}
+
+	res = DeletePeerMassage("1234", keys[0])
+	if res != "0" {
+		t.Errorf("Delete message dailed: %s", res)
+	}
 }
 
 func deleteMessage(messageKey string, access *uplink.Access) {
 	delete(messageKey, "shift", context.Background(), access)
+}
+
+func TestGetMatelistExport(t *testing.T) {
+	account = _account{}
+	peerList = []_peer{}
+	peerList = append(peerList, _peer{Name: "Art", Uuid: "1234", StorjBucket: "shift", StorjAccessToken: "token"})
+	peerList = append(peerList, _peer{Name: "Testuser", Uuid: "2345", StorjBucket: "shift", StorjAccessToken: ""})
+	peerList = append(peerList, _peer{Name: "Testuser2", Uuid: "2346", StorjBucket: "shift2", StorjAccessToken: "token2"})
+
+	res := GetMatelist()
+	if res != "[{\"Name\":\"Testuser\",\"Scooping\":false,\"Uuid\":\"2345\",\"Country\":\"\",\"FriendsCount\":0,\"HasPeerData\":false},{\"Name\":\"Testuser2\",\"Scooping\":false,\"Uuid\":\"2346\",\"Country\":\"\",\"FriendsCount\":0,\"HasPeerData\":true}]" {
+		t.Errorf("Expected res not to be %s", res)
+	}
 }

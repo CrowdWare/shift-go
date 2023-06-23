@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"flag"
 	"fmt"
 	"log"
 	"runtime"
@@ -42,7 +41,11 @@ func Init(filesDir string) {
 	}
 	dbFile = filesDir + "/shift.db"
 	peerFile = filesDir + "/peers.db"
-	if !readPeers() {
+	if fileExists(peerFile) {
+		log.Println("About to read peers")
+		readPeers()
+	} else {
+		log.Println("About to create peers")
 		createPeer()
 	}
 }
@@ -102,12 +105,13 @@ func CreateAccount(name, uuid, ruuid, country, language string) int {
  */
 func GetMatelist() string {
 	list := getMatelist(false)
-	for _, p := range peerList {
+	for i, p := range peerList {
 		index := contains(list, p.Uuid)
+		hasPerData := p.StorjBucket != "" && p.StorjAccessToken != ""
 		if index > 0 {
-			list[index].HasPeerData = true
-		} else {
-			list = append(list, Friend{Name: p.Name, Uuid: p.Uuid, HasPeerData: true})
+			list[index].HasPeerData = hasPerData
+		} else if i != 0 {
+			list = append(list, Friend{Name: p.Name, Uuid: p.Uuid, HasPeerData: hasPerData})
 		}
 	}
 	jsonData, err := json.Marshal(list)
@@ -407,6 +411,7 @@ func AddPeerFromQRCode(enc string) bool {
 		}
 		return false
 	}
+
 	var peer _peer
 	err = json.Unmarshal([]byte(jsonData), &peer)
 	if err != nil {
@@ -471,7 +476,7 @@ func GetPeerQRCode() string {
 **	Saves the Storj Data
  */
 func SetStorj(bucketName string, accessKey string) bool {
-	if bucketName == "" || accessKey == "" {
+	if bucketName == "" && accessKey == "" {
 		return false
 	}
 	peerList[0].StorjBucket = bucketName
@@ -504,9 +509,6 @@ func GetAccessToken() string {
 **	Puts an encrypted message on the Storj bucket from the peer
  */
 func SendMessageToPeer(peerUuid string, message string) string {
-	if debug {
-		log.Println("SendMessageToPeer has been called ")
-	}
 	peer := -1
 	for i, p := range peerList {
 		if p.Uuid == peerUuid {
@@ -517,15 +519,14 @@ func SendMessageToPeer(peerUuid string, message string) string {
 		return "1"
 	}
 	ctx := context.Background()
-	accessGrant := flag.String("accessSend", peerList[peer].StorjAccessToken, "access grant from satellite")
-	access, err := uplink.ParseAccess(*accessGrant)
+
+	access, err := uplink.ParseAccess(peerList[peer].StorjAccessToken)
 	if err != nil {
 		if debug {
 			log.Printf("parse access failed %s", err.Error())
 		}
 		return "2"
 	}
-
 	cipherText, err := encryptString(peerList[peer].CryptoKey, message)
 	if err != nil {
 		if debug {
@@ -534,7 +535,7 @@ func SendMessageToPeer(peerUuid string, message string) string {
 		return "3"
 	}
 
-	messageKey := "shift/messages/" + peerList[0].Uuid + "/" + uuid.NewString()
+	messageKey := "shift/messages/" + account.Uuid + "/" + uuid.NewString()
 	err = put(messageKey, cipherText, peerList[peer].StorjBucket, ctx, access)
 	if err != nil {
 		if debug {
@@ -550,8 +551,8 @@ func SendMessageToPeer(peerUuid string, message string) string {
  */
 func GetMessagesfromPeer(peerUuid string) string {
 	ctx := context.Background()
-	accessGrant := flag.String("accessList", peerList[0].StorjAccessToken, "access grant from satellite")
-	access, err := uplink.ParseAccess(*accessGrant)
+
+	access, err := uplink.ParseAccess(peerList[0].StorjAccessToken)
 	if err != nil {
 		if debug {
 			log.Printf("parse access failed %s", err.Error())
@@ -574,8 +575,8 @@ func GetMessagesfromPeer(peerUuid string) string {
  */
 func GetPeerMessage(peerUuid, key string) string {
 	ctx := context.Background()
-	accessGrant := flag.String("accessGet", peerList[0].StorjAccessToken, "access grant from satellite")
-	access, err := uplink.ParseAccess(*accessGrant)
+
+	access, err := uplink.ParseAccess(peerList[0].StorjAccessToken)
 	if err != nil {
 		if debug {
 			log.Printf("parse access failed %s", err.Error())
@@ -598,4 +599,70 @@ func GetPeerMessage(peerUuid, key string) string {
 		return "3"
 	}
 	return "0," + plaintext
+}
+
+/*
+**	Return true is a message still exists.
+**	In this case the receiver received it, downloaded it maybe and deleted it.
+ */
+func DoesPeerMessageExist(peerUuid, messageKey string) string {
+	peer := -1
+	for i, p := range peerList {
+		if p.Uuid == peerUuid {
+			peer = i
+		}
+	}
+	if peer == -1 {
+		return "1"
+	}
+	ctx := context.Background()
+
+	access, err := uplink.ParseAccess(peerList[peer].StorjAccessToken)
+	if err != nil {
+		if debug {
+			log.Printf("parse access failed %s", err.Error())
+		}
+		return "2"
+	}
+	exists, err := exists(messageKey, peerList[peer].StorjBucket, ctx, access)
+	if err != nil {
+		log.Println("Exist calling exist: " + err.Error())
+		return "3"
+	}
+	if exists {
+		return "true"
+	}
+	return "false"
+}
+
+/*
+**	Deletes a message from Storj
+ */
+func DeletePeerMassage(peerUuid, messageKey string) string {
+	peer := -1
+	for i, p := range peerList {
+		if p.Uuid == peerUuid {
+			peer = i
+		}
+	}
+	if peer == -1 {
+		return "1"
+	}
+	ctx := context.Background()
+
+	access, err := uplink.ParseAccess(peerList[peer].StorjAccessToken)
+	if err != nil {
+		if debug {
+			log.Printf("parse access failed %s", err.Error())
+		}
+		return "2"
+	}
+	err = delete(messageKey, peerList[peer].StorjBucket, ctx, access)
+	if err != nil {
+		if debug {
+			log.Println("Error deleting a message: " + err.Error())
+		}
+		return "3"
+	}
+	return "0"
 }

@@ -24,7 +24,7 @@ func writeFile(filename string, content []byte) error {
 	defer mutex.Unlock()
 
 	tempFilePath := filename + ".temp"
-	ciphertext, nonce, err := encryptBytesGCM(content)
+	ciphertext, nonce, err := encryptBytesGCM(content, filename)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func readFile(filename string) ([]byte, error) {
 	nonce := contentWithNonce[:12]
 	ciphertext := contentWithNonce[12:]
 
-	plainbytes, err := decryptBytesGCM(ciphertext, nonce)
+	plainbytes, err := decryptBytesGCM(ciphertext, nonce, filename)
 	if err != nil {
 		return nil, err
 	}

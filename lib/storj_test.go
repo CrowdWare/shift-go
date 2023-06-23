@@ -3,7 +3,6 @@ package lib
 import (
 	"bytes"
 	"context"
-	"flag"
 	"testing"
 
 	"storj.io/uplink"
@@ -15,8 +14,7 @@ func TestStorj(t *testing.T) {
 	accessToken := "1GW7L5Hab3vR4twJARK4mMuatA2D319NyYboQXnRQU9JcLDj2BEwwtiZ5whRtwDV4KRPvsfV4HcSjq9DutvF2NLr6yMgij6N6debnCzeLEfPZJds2uLtj4PcQHPXUyzqStdxwTAZrMDJX4RQcvdpqAtbRUVxtbrkg7hRCrjgwTFNCAoATvfeeoXacMkUBMSxpNXLfp3NYWk9KjGgbRC9SkFHDurkrHg8aVs1mMs2vRqW2Y1mcHbpzYthWJxfJB1sQP1shfRyCUZxTY4okb5gnZH3tSSyCPSsSkbLh6KSYnVrb2bqRAr1AgvfQVaB"
 	ctx := context.Background()
 
-	accessGrant := flag.String("access1", accessToken, "access grant from satellite")
-	access, err := uplink.ParseAccess(*accessGrant)
+	access, err := uplink.ParseAccess(accessToken)
 	if err != nil {
 		t.Errorf("parse access failed %s", err.Error())
 		return

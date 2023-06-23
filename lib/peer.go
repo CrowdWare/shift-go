@@ -55,30 +55,28 @@ func addPeer(name string, uuid string, publicKey []byte, storjBucket string, sto
 		peerList[peer].StorjAccessToken = storjAccessToken
 	} else {
 		// append peer
-		peerList = append(peerList, _peer{Uuid: uuid, CryptoKey: publicKey, StorjBucket: storjBucket, StorjAccessToken: storjAccessToken})
+		peerList = append(peerList, _peer{Name: name, Uuid: uuid, CryptoKey: publicKey, StorjBucket: storjBucket, StorjAccessToken: storjAccessToken})
 	}
 	writePeers()
 }
 
 func readPeers() bool {
-	if fileExists(peerFile) {
-		buffer, err := readFile(peerFile)
-		if err != nil {
-			if debug {
-				log.Println("Error reading file " + peerFile + ", " + err.Error())
-			}
-			return true
+	buffer, err := readFile(peerFile)
+	if err != nil {
+		if debug {
+			log.Println("Error reading file " + peerFile + ", " + err.Error())
 		}
-		decoder := gob.NewDecoder(bytes.NewReader(buffer))
-		err = decoder.Decode(&peerList)
-		if err != nil {
-			if debug {
-				log.Println("readPeers: " + err.Error())
-			}
-		}
-		return true
+		return false
 	}
-	return false
+	decoder := gob.NewDecoder(bytes.NewReader(buffer))
+	err = decoder.Decode(&peerList)
+	if err != nil {
+		if debug {
+			log.Println("readPeers: " + err.Error())
+		}
+		return false
+	}
+	return true
 }
 
 func writePeers() {
