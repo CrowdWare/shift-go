@@ -17,6 +17,12 @@ import (
 	"storj.io/uplink"
 )
 
+func TestIsDevice(t *testing.T) {
+	if isDevice() {
+		t.Error("Is device should return false when testing on a desktop")
+	}
+}
+
 func TestGetTransactions(t *testing.T) {
 	account = _account{}
 	account.Transactions = append(account.Transactions, _transaction{Pkey: "", Amount: 34, Date: time.Date(2023, 1, 28, 4, 2, 45, 0, time.Local), Typ: InitialBooking})
@@ -290,9 +296,8 @@ func TestPeerTransfer(t *testing.T) {
 		Bytes: privateKeyBytes,
 	})
 
-	peerList = []_peer{}
-	peer := _peer{Name: "Hans", Uuid: "1234", CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: "acckey"}
-	peerList = append(peerList, peer)
+	peerMap = map[string]_peer{}
+	peerMap["1234"] = _peer{Name: "Hans", Uuid: "1234", CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: "acckey"}
 
 	code := GetPeerQRCode()
 	if code != "" {
@@ -302,33 +307,38 @@ func TestPeerTransfer(t *testing.T) {
 	SetStorj("bucket", "key")
 	code = GetPeerQRCode()
 
+	// reset peerlist to be different than before
+	peerMap = map[string]_peer{}
+	peerMap["2345"] = _peer{Name: "Testuser", Uuid: "2345", CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: "acckey"}
+
 	res := AddPeerFromQRCode(code)
-	if res != true {
+	if res == "" {
 		t.Error("Error getting peer from QR")
 	}
-	if len(peerList) != 2 {
-		t.Errorf("Expected len to be 2 but got %d", len(peerList))
+	if len(peerMap) != 2 {
+		t.Errorf("Expected len to be 2 but got %d", len(peerMap))
 	}
-	if peerList[1].Uuid != "1234" {
-		t.Errorf("Expected uuid to be 1234 but got %s", peerList[1].Uuid)
+	if res != "1234" {
+		t.Errorf("Expected uuid to be 1234 but got %s", res)
 	}
 
-	if peerList[1].Name != "Hans" {
-		t.Errorf("Expected name to be Hans but got %s", peerList[1].Name)
+	if peerMap[res].Name != "Hans" {
+		t.Errorf("Expected name to be Hans but got %s", peerMap[res].Name)
 	}
 	publicKey := &privateKey.PublicKey
 	publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
 		t.Error("Failed to encode public key:")
 	}
-	if !bytes.Equal(peerList[1].CryptoKey, publicKeyBytes) {
+	if !bytes.Equal(peerMap[res].CryptoKey, publicKeyBytes) {
 		t.Error("Keys are not equal")
 	}
 	os.Remove("/tmp/peers.db")
 }
 
 func TestSetStorj(t *testing.T) {
-	peerList = append(peerList, _peer{Name: "Art", Uuid: "1234", CryptoKey: []byte(""), StorjBucket: "shift", StorjAccessToken: ""})
+	peerMap = map[string]_peer{}
+	peerMap["1234"] = _peer{Name: "Art", Uuid: "1234", CryptoKey: []byte(""), StorjBucket: "shift", StorjAccessToken: ""}
 
 	res := SetStorj("shift", "key")
 	if res != true {
@@ -365,9 +375,9 @@ func TestSendMessageToPeer(t *testing.T) {
 		return
 	}
 	account.Uuid = "1234"
-	peerList = []_peer{}
-	peerList = append(peerList, _peer{Name: "Art", Uuid: "1234", CryptoKey: privateKeyPEM1, StorjBucket: "shift", StorjAccessToken: accessToken})
-	peerList = append(peerList, _peer{Name: "Testuser", Uuid: "2345", CryptoKey: publicKeyBytes, StorjBucket: "shift", StorjAccessToken: accessToken})
+	peerMap = map[string]_peer{}
+	peerMap["1234"] = _peer{Name: "Art", Uuid: "1234", CryptoKey: privateKeyPEM1, StorjBucket: "shift", StorjAccessToken: accessToken}
+	peerMap["2345"] = _peer{Name: "Testuser", Uuid: "2345", CryptoKey: publicKeyBytes, StorjBucket: "shift", StorjAccessToken: accessToken}
 
 	// test sending a message
 	messageKey := SendMessageToPeer("2345", "This is a test message.")
@@ -382,7 +392,9 @@ func TestSendMessageToPeer(t *testing.T) {
 	defer deleteMessage(messageKey, access)
 
 	// now we have to switch sites to the getters account
-	peerList[0].CryptoKey = privateKeyPEM2
+	peer, _ := peerMap[account.Uuid]
+	peer.CryptoKey = privateKeyPEM2
+	peerMap[account.Uuid] = peer
 
 	// test getting a list of keys
 	res := GetMessagesfromPeer("1234")
@@ -423,10 +435,11 @@ func deleteMessage(messageKey string, access *uplink.Access) {
 
 func TestGetMatelistExport(t *testing.T) {
 	account = _account{}
-	peerList = []_peer{}
-	peerList = append(peerList, _peer{Name: "Art", Uuid: "1234", StorjBucket: "shift", StorjAccessToken: "token"})
-	peerList = append(peerList, _peer{Name: "Testuser", Uuid: "2345", StorjBucket: "shift", StorjAccessToken: ""})
-	peerList = append(peerList, _peer{Name: "Testuser2", Uuid: "2346", StorjBucket: "shift2", StorjAccessToken: "token2"})
+	account.Uuid = "1234"
+	peerMap = map[string]_peer{}
+	peerMap["1234"] = _peer{Name: "Art", Uuid: "1234", StorjBucket: "shift", StorjAccessToken: "token"}
+	peerMap["2345"] = _peer{Name: "Testuser", Uuid: "2345", StorjBucket: "shift", StorjAccessToken: ""}
+	peerMap["2346"] = _peer{Name: "Testuser2", Uuid: "2346", StorjBucket: "shift2", StorjAccessToken: "token2"}
 
 	res := GetMatelist()
 	if res != "[{\"Name\":\"Testuser\",\"Scooping\":false,\"Uuid\":\"2345\",\"Country\":\"\",\"FriendsCount\":0,\"HasPeerData\":false},{\"Name\":\"Testuser2\",\"Scooping\":false,\"Uuid\":\"2346\",\"Country\":\"\",\"FriendsCount\":0,\"HasPeerData\":true}]" {

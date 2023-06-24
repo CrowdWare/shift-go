@@ -9,32 +9,30 @@ import (
 )
 
 func TestPeerSerialize(t *testing.T) {
-	var peerlist []_peer
-	peer := _peer{Uuid: "1234", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
-	peerlist = append(peerlist, peer)
+	peerMap = map[string]_peer{}
+	peerMap["1234"] = _peer{Uuid: "1234", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
 	var buffer bytes.Buffer
 
 	encoder := gob.NewEncoder(&buffer)
-	err := encoder.Encode(peerlist)
+	err := encoder.Encode(peerMap)
 	if err != nil {
 		t.Error(err)
 	}
-	var peerlist2 []_peer
+	var peerMap2 = map[string]_peer{}
 	decoder := gob.NewDecoder(bytes.NewReader(buffer.Bytes()))
-	err = decoder.Decode(&peerlist2)
+	err = decoder.Decode(&peerMap2)
 	if err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual(peerlist, peerlist2) {
-		t.Errorf("Peer mismatch:\nExpected: %v\nGot: %v", peerlist, peerlist2)
+	if !reflect.DeepEqual(peerMap, peerMap2) {
+		t.Errorf("Peer mismatch:\nExpected: %v\nGot: %v", peerMap, peerMap2)
 	}
 }
 
 func TestReadWritePeers(t *testing.T) {
 	peerFile = "/tmp/peers.db"
-	peerList = []_peer{}
-	peer := _peer{Uuid: "1234", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
-	peerList = append(peerList, peer)
+	peerMap = map[string]_peer{}
+	peerMap["1234"] = _peer{Name: "Hans", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
 	writePeers()
 
 	result := readPeers()
@@ -51,12 +49,14 @@ func TestReadWritePeers(t *testing.T) {
 		t.Errorf("Unexpected result. Got: %v, Expected: %v", result, expected)
 	}
 
-	if len(peerList) != 1 {
-		t.Errorf("Expected peercount to be 1 but got %d", len(peerList))
+	if len(peerMap) != 1 {
+		t.Errorf("Expected peercount to be 1 but got %d", len(peerMap))
 	}
 
-	if peerList[0].Uuid != "1234" {
-		t.Errorf("Expected peer 1234 to be Hans but got %s", peerList[0].Uuid)
+	if peer, ok := peerMap["1234"]; ok {
+		if peer.Name != "Hans" {
+			t.Errorf("Expected peer 1234 to be Hans but got %s", peer.Name)
+		}
 	}
 
 	os.Remove("/tmp/peers.db")
@@ -64,20 +64,18 @@ func TestReadWritePeers(t *testing.T) {
 
 func TestAddPeer(t *testing.T) {
 	peerFile = "/tmp/peers.db"
-	peerList = []_peer{}
-	peer := _peer{Uuid: "1234", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
-	peerList = append(peerList, peer)
-	peer2 := _peer{Uuid: "1235", CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
-	peerList = append(peerList, peer2)
+	peerMap = map[string]_peer{}
+	peerMap["1234"] = _peer{CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
+	peerMap["1235"] = _peer{CryptoKey: []byte("pubkey"), StorjBucket: "bucket", StorjAccessToken: "acckey"}
 	writePeers()
 
 	addPeer("Hans", "1235", []byte("pubkeyNew"), "newbucket", "newtoken")
 
-	if len(peerList) != 2 {
-		t.Errorf("Expected len to be 2 but got %d", len(peerList))
+	if len(peerMap) != 2 {
+		t.Errorf("Expected len to be 2 but got %d", len(peerMap))
 	}
 
-	if peerList[1].StorjBucket != "newbucket" {
-		t.Errorf("Expected newbucket but found %s", peerList[2].StorjBucket)
+	if peerMap["1235"].StorjBucket != "newbucket" {
+		t.Errorf("Expected newbucket but found %s", peerMap["1235"].StorjBucket)
 	}
 }

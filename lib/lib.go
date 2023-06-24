@@ -2,6 +2,7 @@ package lib
 
 var dbFile string
 var peerFile string
+var messageFile string
 var account _account
 var lastTransaction _transaction
 var initialAmount = int64(initial_amount)

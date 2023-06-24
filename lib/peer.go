@@ -11,11 +11,11 @@ import (
 	"log"
 )
 
-var peerList []_peer
+var peerMap map[string]_peer
 
 type _peer struct {
-	Name             string
 	Uuid             string
+	Name             string
 	CryptoKey        []byte // first peer in the list is local and a private key, for all others its a public key
 	StorjBucket      string
 	StorjAccessToken string
@@ -35,27 +35,22 @@ func createPeer() int {
 		Bytes: privateKeyBytes,
 	})
 
-	localPeer := _peer{Name: account.Name, Uuid: account.Uuid, CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: ""}
-	peerList = append(peerList, localPeer)
+	localPeer := _peer{Uuid: account.Uuid, Name: account.Name, CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: ""}
+	peerMap[account.Uuid] = localPeer
 	writePeers()
 	return 0
 }
 
 func addPeer(name string, uuid string, publicKey []byte, storjBucket string, storjAccessToken string) {
-	peer := -1
-	for i, p := range peerList {
-		if p.Uuid == uuid {
-			peer = i
-		}
-	}
-	if peer > 0 {
-		// peer already exist, so update it
-		peerList[peer].CryptoKey = publicKey
-		peerList[peer].StorjBucket = storjBucket
-		peerList[peer].StorjAccessToken = storjAccessToken
+	if existingPeer, ok := peerMap[uuid]; ok {
+		// update peer
+		existingPeer.CryptoKey = publicKey
+		existingPeer.StorjBucket = storjBucket
+		existingPeer.StorjAccessToken = storjAccessToken
+		peerMap[uuid] = existingPeer
 	} else {
 		// append peer
-		peerList = append(peerList, _peer{Name: name, Uuid: uuid, CryptoKey: publicKey, StorjBucket: storjBucket, StorjAccessToken: storjAccessToken})
+		peerMap[uuid] = _peer{Uuid: uuid, Name: name, CryptoKey: publicKey, StorjBucket: storjBucket, StorjAccessToken: storjAccessToken}
 	}
 	writePeers()
 }
@@ -69,7 +64,7 @@ func readPeers() bool {
 		return false
 	}
 	decoder := gob.NewDecoder(bytes.NewReader(buffer))
-	err = decoder.Decode(&peerList)
+	err = decoder.Decode(&peerMap)
 	if err != nil {
 		if debug {
 			log.Println("readPeers: " + err.Error())
@@ -82,7 +77,7 @@ func readPeers() bool {
 func writePeers() {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
-	err := encoder.Encode(peerList)
+	err := encoder.Encode(peerMap)
 	if err != nil {
 		if debug {
 			log.Println(err)

@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
+	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -33,7 +34,7 @@ type TransactionTO struct {
  */
 func Init(filesDir string) {
 	// avoid scooping on a desktop
-	if runtime.GOOS != "android" && runtime.GOOS != "ios" {
+	if !isDevice() {
 		growLevel0 = 0
 		growLevel1 = 0
 		growLevel2 = 0
@@ -41,13 +42,42 @@ func Init(filesDir string) {
 	}
 	dbFile = filesDir + "/shift.db"
 	peerFile = filesDir + "/peers.db"
+	messageFile = filesDir + "/messages.db"
 	if fileExists(peerFile) {
-		log.Println("About to read peers")
 		readPeers()
 	} else {
-		log.Println("About to create peers")
 		createPeer()
 	}
+	if fileExists(messageFile) {
+		readMessages()
+	}
+}
+
+func isDevice() bool {
+	// Check the value of the runtime.GOARCH
+	goarch := runtime.GOARCH
+	if goarch == "x86" || goarch == "amd64" {
+		return false // Emulator or virtualized environment
+	}
+
+	// Check the value of the ANDROID_EMULATOR environment variable
+	emulator := os.Getenv("ANDROID_EMULATOR")
+	if emulator == "1" {
+		return false // Emulator
+	}
+
+	// Check if the /sys/qemu_trace file exists
+	_, err := os.Stat("/sys/qemu_trace")
+	if err == nil {
+		return false // Emulator or virtualized environment
+	}
+
+	// Check the value of the GOOS environment variable
+	goos := strings.ToLower(os.Getenv("GOOS"))
+	if goos == "android" || goos == "ios" {
+		return true // Physical device
+	}
+	return false
 }
 
 /*
@@ -105,13 +135,13 @@ func CreateAccount(name, uuid, ruuid, country, language string) int {
  */
 func GetMatelist() string {
 	list := getMatelist(false)
-	for i, p := range peerList {
-		index := contains(list, p.Uuid)
+	for key, p := range peerMap {
+		index := contains(list, key)
 		hasPerData := p.StorjBucket != "" && p.StorjAccessToken != ""
 		if index > 0 {
 			list[index].HasPeerData = hasPerData
-		} else if i != 0 {
-			list = append(list, Friend{Name: p.Name, Uuid: p.Uuid, HasPeerData: hasPerData})
+		} else if key != account.Uuid {
+			list = append(list, Friend{Name: p.Name, Uuid: key, HasPeerData: hasPerData})
 		}
 	}
 	jsonData, err := json.Marshal(list)
@@ -403,13 +433,13 @@ func GetAgreementFromQRCode(enc string) string {
 /*
 **	Decrypt the QR-Code, unmarshalls the peer and add it to the peer list
  */
-func AddPeerFromQRCode(enc string) bool {
+func AddPeerFromQRCode(enc string) string {
 	jsonData, err := decryptStringGCM(enc, false)
 	if err != nil {
 		if debug {
 			log.Println(err)
 		}
-		return false
+		return ""
 	}
 
 	var peer _peer
@@ -418,27 +448,22 @@ func AddPeerFromQRCode(enc string) bool {
 		if debug {
 			log.Println("GetAgreementFromQRCode: error unmarshaling transaction")
 		}
-		return false
+		return ""
 	}
 	addPeer(peer.Name, peer.Uuid, peer.CryptoKey, peer.StorjBucket, peer.StorjAccessToken)
-	return true
+	return peer.Uuid
 }
 
 /*
 **	Returns an encrypted record of the first Peer
  */
 func GetPeerQRCode() string {
-	if len(peerList) == 0 {
-		cp := createPeer()
-		if cp != 0 {
-			return ""
-		}
-	}
-	if peerList[0].StorjBucket == "" {
+
+	if peerMap[account.Uuid].StorjBucket == "" {
 		return ""
 	}
 	// Decode the private key from the string
-	block, _ := pem.Decode(peerList[0].CryptoKey)
+	block, _ := pem.Decode(peerMap[account.Uuid].CryptoKey)
 	if block == nil || block.Type != "RSA PRIVATE KEY" {
 		if debug {
 			fmt.Println("Failed to decode private key")
@@ -461,7 +486,7 @@ func GetPeerQRCode() string {
 		return ""
 	}
 
-	peer := _peer{Name: account.Name, Uuid: account.Uuid, CryptoKey: publicKeyBytes, StorjBucket: peerList[0].StorjBucket, StorjAccessToken: peerList[0].StorjAccessToken}
+	peer := _peer{Name: account.Name, Uuid: account.Uuid, CryptoKey: publicKeyBytes, StorjBucket: peerMap[account.Uuid].StorjBucket, StorjAccessToken: peerMap[account.Uuid].StorjAccessToken}
 	jsonData, err := json.Marshal(peer)
 	if err != nil {
 		if debug {
@@ -479,8 +504,10 @@ func SetStorj(bucketName string, accessKey string) bool {
 	if bucketName == "" && accessKey == "" {
 		return false
 	}
-	peerList[0].StorjBucket = bucketName
-	peerList[0].StorjAccessToken = accessKey
+	peer, _ := peerMap[account.Uuid]
+	peer.StorjBucket = bucketName
+	peer.StorjAccessToken = accessKey
+	peerMap[account.Uuid] = peer
 	writePeers()
 	return true
 }
@@ -489,8 +516,8 @@ func SetStorj(bucketName string, accessKey string) bool {
 **	Returns the Storj Bucketname
  */
 func GetBucketName() string {
-	if len(peerList) > 0 {
-		return peerList[0].StorjBucket
+	if len(peerMap) > 0 {
+		return peerMap[account.Uuid].StorjBucket
 	}
 	return ""
 }
@@ -499,8 +526,8 @@ func GetBucketName() string {
 **	Return the Storj Access Token
  */
 func GetAccessToken() string {
-	if len(peerList) > 0 {
-		return peerList[0].StorjAccessToken
+	if len(peerMap) > 0 {
+		return peerMap[account.Uuid].StorjAccessToken
 	}
 	return ""
 }
@@ -509,25 +536,21 @@ func GetAccessToken() string {
 **	Puts an encrypted message on the Storj bucket from the peer
  */
 func SendMessageToPeer(peerUuid string, message string) string {
-	peer := -1
-	for i, p := range peerList {
-		if p.Uuid == peerUuid {
-			peer = i
-		}
-	}
-	if peer == -1 {
+	peer, ok := peerMap[peerUuid]
+	if !ok {
 		return "1"
 	}
+
 	ctx := context.Background()
 
-	access, err := uplink.ParseAccess(peerList[peer].StorjAccessToken)
+	access, err := uplink.ParseAccess(peer.StorjAccessToken)
 	if err != nil {
 		if debug {
 			log.Printf("parse access failed %s", err.Error())
 		}
 		return "2"
 	}
-	cipherText, err := encryptString(peerList[peer].CryptoKey, message)
+	cipherText, err := encryptString(peer.CryptoKey, message)
 	if err != nil {
 		if debug {
 			log.Println("error encryting the message: " + err.Error())
@@ -536,7 +559,7 @@ func SendMessageToPeer(peerUuid string, message string) string {
 	}
 
 	messageKey := "shift/messages/" + account.Uuid + "/" + uuid.NewString()
-	err = put(messageKey, cipherText, peerList[peer].StorjBucket, ctx, access)
+	err = put(messageKey, cipherText, peer.StorjBucket, ctx, access)
 	if err != nil {
 		if debug {
 			log.Println("put failed: " + err.Error())
@@ -552,14 +575,14 @@ func SendMessageToPeer(peerUuid string, message string) string {
 func GetMessagesfromPeer(peerUuid string) string {
 	ctx := context.Background()
 
-	access, err := uplink.ParseAccess(peerList[0].StorjAccessToken)
+	access, err := uplink.ParseAccess(peerMap[account.Uuid].StorjAccessToken)
 	if err != nil {
 		if debug {
 			log.Printf("parse access failed %s", err.Error())
 		}
 		return "1"
 	}
-	keys, err := listObjects(peerList[0].StorjBucket, "shift/messages/"+peerUuid+"/", ctx, access)
+	keys, err := listObjects(peerMap[account.Uuid].StorjBucket, "shift/messages/"+peerUuid+"/", ctx, access)
 	if err != nil {
 		if debug {
 			log.Printf("list oebjects failed %s", err.Error())
@@ -576,14 +599,14 @@ func GetMessagesfromPeer(peerUuid string) string {
 func GetPeerMessage(peerUuid, key string) string {
 	ctx := context.Background()
 
-	access, err := uplink.ParseAccess(peerList[0].StorjAccessToken)
+	access, err := uplink.ParseAccess(peerMap[account.Uuid].StorjAccessToken)
 	if err != nil {
 		if debug {
 			log.Printf("parse access failed %s", err.Error())
 		}
 		return "1"
 	}
-	ciphertext, err := get(key, peerList[0].StorjBucket, ctx, access)
+	ciphertext, err := get(key, peerMap[account.Uuid].StorjBucket, ctx, access)
 	if err != nil {
 		if debug {
 			log.Printf("get failed %s", err.Error())
@@ -591,7 +614,7 @@ func GetPeerMessage(peerUuid, key string) string {
 		return "2"
 	}
 
-	plaintext, err := decryptString(peerList[0].CryptoKey, ciphertext)
+	plaintext, err := decryptString(peerMap[account.Uuid].CryptoKey, ciphertext)
 	if err != nil {
 		if debug {
 			log.Printf("decrypt failed %s", err.Error())
@@ -606,25 +629,20 @@ func GetPeerMessage(peerUuid, key string) string {
 **	In this case the receiver received it, downloaded it maybe and deleted it.
  */
 func DoesPeerMessageExist(peerUuid, messageKey string) string {
-	peer := -1
-	for i, p := range peerList {
-		if p.Uuid == peerUuid {
-			peer = i
-		}
-	}
-	if peer == -1 {
+	peer, ok := peerMap[peerUuid]
+	if !ok {
 		return "1"
 	}
 	ctx := context.Background()
 
-	access, err := uplink.ParseAccess(peerList[peer].StorjAccessToken)
+	access, err := uplink.ParseAccess(peer.StorjAccessToken)
 	if err != nil {
 		if debug {
 			log.Printf("parse access failed %s", err.Error())
 		}
 		return "2"
 	}
-	exists, err := exists(messageKey, peerList[peer].StorjBucket, ctx, access)
+	exists, err := exists(messageKey, peer.StorjBucket, ctx, access)
 	if err != nil {
 		log.Println("Exist calling exist: " + err.Error())
 		return "3"
@@ -639,25 +657,20 @@ func DoesPeerMessageExist(peerUuid, messageKey string) string {
 **	Deletes a message from Storj
  */
 func DeletePeerMassage(peerUuid, messageKey string) string {
-	peer := -1
-	for i, p := range peerList {
-		if p.Uuid == peerUuid {
-			peer = i
-		}
-	}
-	if peer == -1 {
+	peer, ok := peerMap[peerUuid]
+	if !ok {
 		return "1"
 	}
 	ctx := context.Background()
 
-	access, err := uplink.ParseAccess(peerList[peer].StorjAccessToken)
+	access, err := uplink.ParseAccess(peer.StorjAccessToken)
 	if err != nil {
 		if debug {
 			log.Printf("parse access failed %s", err.Error())
 		}
 		return "2"
 	}
-	err = delete(messageKey, peerList[peer].StorjBucket, ctx, access)
+	err = delete(messageKey, peer.StorjBucket, ctx, access)
 	if err != nil {
 		if debug {
 			log.Println("Error deleting a message: " + err.Error())
