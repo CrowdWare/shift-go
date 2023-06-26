@@ -22,6 +22,7 @@ type _peer struct {
 }
 
 func createPeer() int {
+	peerMap = make(map[string]_peer)
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		if debug {

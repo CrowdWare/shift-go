@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"storj.io/uplink"
 )
@@ -41,31 +42,32 @@ func put(key string, dataToUpload []byte, bucketName string, ctx context.Context
 	return nil
 }
 
-func get(key string, bucketName string, ctx context.Context, access *uplink.Access) ([]byte, error) {
+func get(key string, bucketName string, ctx context.Context, access *uplink.Access) ([]byte, time.Time, error) {
 	empty := make([]byte, 0)
+	var t time.Time
 
 	project, err := uplink.OpenProject(ctx, access)
 	if err != nil {
-		return empty, fmt.Errorf("could not open project: %v", err)
+		return empty, t, fmt.Errorf("could not open project: %v", err)
 	}
 	defer project.Close()
 
 	_, err = project.EnsureBucket(ctx, bucketName)
 	if err != nil {
-		return empty, fmt.Errorf("could not ensure bucket: %v", err)
+		return empty, t, fmt.Errorf("could not ensure bucket: %v", err)
 	}
 
 	download, err := project.DownloadObject(ctx, bucketName, key, nil)
 	if err != nil {
-		return empty, fmt.Errorf("could not open object: %v", err)
+		return empty, t, fmt.Errorf("could not open object: %v", err)
 	}
 	defer download.Close()
 
 	receivedContents, err := io.ReadAll(download)
 	if err != nil {
-		return empty, fmt.Errorf("could not read data: %v", err)
+		return empty, t, fmt.Errorf("could not read data: %v", err)
 	}
-	return receivedContents, nil
+	return receivedContents, download.Info().System.Created, nil
 }
 
 func delete(key string, bucketName string, ctx context.Context, access *uplink.Access) error {

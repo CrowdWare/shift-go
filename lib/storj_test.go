@@ -25,7 +25,7 @@ func TestStorj(t *testing.T) {
 		t.Errorf("put failed: " + err.Error())
 	}
 
-	buffer, err := get("foo/bar/baz", bucketName, ctx, access)
+	buffer, _, err := get("foo/bar/baz", bucketName, ctx, access)
 	if err != nil {
 		t.Errorf("get failed: " + err.Error())
 	}

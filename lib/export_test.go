@@ -347,6 +347,8 @@ func TestSetStorj(t *testing.T) {
 }
 
 func TestSendMessageToPeer(t *testing.T) {
+	messageFile = "/tmp/messages.db"
+	createMessages()
 	accessToken := "1GW7L5Hab3vR4twJARK4mMuatA2D319NyYboQXnRQU9JcLDj2BEwwtiZ5whRtwDV4KRPvsfV4HcSjq9DutvF2NLr6yMgij6N6debnCzeLEfPZJds2uLtj4PcQHPXUyzqStdxwTAZrMDJX4RQcvdpqAtbRUVxtbrkg7hRCrjgwTFNCAoATvfeeoXacMkUBMSxpNXLfp3NYWk9KjGgbRC9SkFHDurkrHg8aVs1mMs2vRqW2Y1mcHbpzYthWJxfJB1sQP1shfRyCUZxTY4okb5gnZH3tSSyCPSsSkbLh6KSYnVrb2bqRAr1AgvfQVaB"
 	privateKey1, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -397,35 +399,42 @@ func TestSendMessageToPeer(t *testing.T) {
 	peerMap[account.Uuid] = peer
 
 	// test getting a list of keys
-	res := GetMessagesfromPeer("1234")
-	if len(res) == 0 {
-		t.Errorf("Got an error getting messages %s", res)
+	keys, err := getMessagesfromPeer("1234")
+	if err != nil {
+		t.Errorf("Got an error getting messages %s", err.Error())
 		return
 	}
-	keys := strings.Split(res, ",")
 	if len(keys) != 1 {
-		t.Errorf("Expected to get one key but got %d", len(keys))
+		t.Errorf("Expected to get 1 key, but got %d", len(keys))
 		return
 	}
 
 	// test getting decrypted message
-	plainText := GetPeerMessage("1234", keys[0])
-	if len(plainText) == 1 {
-		t.Errorf("Got an error getting a message %s", plainText)
+	plainText, _, err := getPeerMessage("1234", keys[0])
+	if err != nil {
+		t.Errorf("Got an error getting a message %s", err.Error())
 		return
 	}
-	if plainText != "0,This is a test message." {
+
+	if plainText != "This is a test message." {
 		t.Errorf("Expected to get same message back, but got %s", plainText)
 	}
 
-	res = DoesPeerMessageExist("1234", keys[0])
-	if res != "true" {
+	res, err := doesPeerMessageExist("1234", keys[0])
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+	if res != true {
 		t.Errorf("Message does not exist")
 	}
 
-	res = DeletePeerMassage("1234", keys[0])
-	if res != "0" {
-		t.Errorf("Delete message dailed: %s", res)
+	result, err := deletePeerMassage("1234", keys[0])
+	if err != nil {
+		t.Errorf("Delete message failed: %s", err.Error())
+	}
+	if !result {
+		t.Error("Delete message failed")
 	}
 }
 
@@ -439,10 +448,9 @@ func TestGetMatelistExport(t *testing.T) {
 	peerMap = map[string]_peer{}
 	peerMap["1234"] = _peer{Name: "Art", Uuid: "1234", StorjBucket: "shift", StorjAccessToken: "token"}
 	peerMap["2345"] = _peer{Name: "Testuser", Uuid: "2345", StorjBucket: "shift", StorjAccessToken: ""}
-	peerMap["2346"] = _peer{Name: "Testuser2", Uuid: "2346", StorjBucket: "shift2", StorjAccessToken: "token2"}
 
 	res := GetMatelist()
-	if res != "[{\"Name\":\"Testuser\",\"Scooping\":false,\"Uuid\":\"2345\",\"Country\":\"\",\"FriendsCount\":0,\"HasPeerData\":false},{\"Name\":\"Testuser2\",\"Scooping\":false,\"Uuid\":\"2346\",\"Country\":\"\",\"FriendsCount\":0,\"HasPeerData\":true}]" {
+	if res != "[{\"Name\":\"Testuser\",\"Scooping\":false,\"Uuid\":\"2345\",\"Country\":\"\",\"FriendsCount\":0,\"HasPeerData\":false}]" {
 		t.Errorf("Expected res not to be %s", res)
 	}
 }

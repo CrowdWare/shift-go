@@ -29,6 +29,15 @@ type TransactionTO struct {
 	Typ     int
 }
 
+type MessageTO struct {
+	Key      string
+	From     string
+	PeerUuid string
+	Message  string
+	Time     string
+	Read     bool
+}
+
 /*
 **	Set the path where the db can be stored.
  */
@@ -50,6 +59,8 @@ func Init(filesDir string) {
 	}
 	if fileExists(messageFile) {
 		readMessages()
+	} else {
+		createMessages()
 	}
 }
 
@@ -458,12 +469,15 @@ func AddPeerFromQRCode(enc string) string {
 **	Returns an encrypted record of the first Peer
  */
 func GetPeerQRCode() string {
-
-	if peerMap[account.Uuid].StorjBucket == "" {
-		return ""
+	peer, ok := peerMap[account.Uuid]
+	if ok {
+		if peer.StorjBucket == "" || peer.StorjAccessToken == "" {
+			return ""
+		}
 	}
+
 	// Decode the private key from the string
-	block, _ := pem.Decode(peerMap[account.Uuid].CryptoKey)
+	block, _ := pem.Decode(peer.CryptoKey)
 	if block == nil || block.Type != "RSA PRIVATE KEY" {
 		if debug {
 			fmt.Println("Failed to decode private key")
@@ -485,9 +499,9 @@ func GetPeerQRCode() string {
 		fmt.Println("Failed to encode public key:", err)
 		return ""
 	}
-
-	peer := _peer{Name: account.Name, Uuid: account.Uuid, CryptoKey: publicKeyBytes, StorjBucket: peerMap[account.Uuid].StorjBucket, StorjAccessToken: peerMap[account.Uuid].StorjAccessToken}
-	jsonData, err := json.Marshal(peer)
+	// we have to create a new peer out of the local peer, because we have to send the public key instead of private key
+	newPeer := _peer{Name: account.Name, Uuid: account.Uuid, CryptoKey: publicKeyBytes, StorjBucket: peer.StorjBucket, StorjAccessToken: peer.StorjAccessToken}
+	jsonData, err := json.Marshal(newPeer)
 	if err != nil {
 		if debug {
 			log.Println(err)
@@ -516,8 +530,9 @@ func SetStorj(bucketName string, accessKey string) bool {
 **	Returns the Storj Bucketname
  */
 func GetBucketName() string {
-	if len(peerMap) > 0 {
-		return peerMap[account.Uuid].StorjBucket
+	peer, ok := peerMap[account.Uuid]
+	if ok {
+		return peer.StorjBucket
 	}
 	return ""
 }
@@ -526,8 +541,9 @@ func GetBucketName() string {
 **	Return the Storj Access Token
  */
 func GetAccessToken() string {
-	if len(peerMap) > 0 {
-		return peerMap[account.Uuid].StorjAccessToken
+	peer, ok := peerMap[account.Uuid]
+	if ok {
+		return peer.StorjAccessToken
 	}
 	return ""
 }
@@ -566,116 +582,68 @@ func SendMessageToPeer(peerUuid string, message string) string {
 		}
 		return "4"
 	}
+	addMessage(messageKey, peer.Name, message, peerUuid, time.Now())
 	return messageKey
-}
-
-/*
-**	Returns a comma separated list of keys. These keys can be used to "get" a message from Storj
- */
-func GetMessagesfromPeer(peerUuid string) string {
-	ctx := context.Background()
-
-	access, err := uplink.ParseAccess(peerMap[account.Uuid].StorjAccessToken)
-	if err != nil {
-		if debug {
-			log.Printf("parse access failed %s", err.Error())
-		}
-		return "1"
-	}
-	keys, err := listObjects(peerMap[account.Uuid].StorjBucket, "shift/messages/"+peerUuid+"/", ctx, access)
-	if err != nil {
-		if debug {
-			log.Printf("list oebjects failed %s", err.Error())
-		}
-		return "2"
-	}
-
-	return strings.Join(keys, ",")
-}
-
-/*
-**	Gets the message from Storj and returns it decrypted
- */
-func GetPeerMessage(peerUuid, key string) string {
-	ctx := context.Background()
-
-	access, err := uplink.ParseAccess(peerMap[account.Uuid].StorjAccessToken)
-	if err != nil {
-		if debug {
-			log.Printf("parse access failed %s", err.Error())
-		}
-		return "1"
-	}
-	ciphertext, err := get(key, peerMap[account.Uuid].StorjBucket, ctx, access)
-	if err != nil {
-		if debug {
-			log.Printf("get failed %s", err.Error())
-		}
-		return "2"
-	}
-
-	plaintext, err := decryptString(peerMap[account.Uuid].CryptoKey, ciphertext)
-	if err != nil {
-		if debug {
-			log.Printf("decrypt failed %s", err.Error())
-		}
-		return "3"
-	}
-	return "0," + plaintext
-}
-
-/*
-**	Return true is a message still exists.
-**	In this case the receiver received it, downloaded it maybe and deleted it.
- */
-func DoesPeerMessageExist(peerUuid, messageKey string) string {
-	peer, ok := peerMap[peerUuid]
-	if !ok {
-		return "1"
-	}
-	ctx := context.Background()
-
-	access, err := uplink.ParseAccess(peer.StorjAccessToken)
-	if err != nil {
-		if debug {
-			log.Printf("parse access failed %s", err.Error())
-		}
-		return "2"
-	}
-	exists, err := exists(messageKey, peer.StorjBucket, ctx, access)
-	if err != nil {
-		log.Println("Exist calling exist: " + err.Error())
-		return "3"
-	}
-	if exists {
-		return "true"
-	}
-	return "false"
 }
 
 /*
 **	Deletes a message from Storj
  */
-func DeletePeerMassage(peerUuid, messageKey string) string {
-	peer, ok := peerMap[peerUuid]
-	if !ok {
-		return "1"
+func DeletePeerMassage(peerUuid, messageKey string) bool {
+	res, err := deletePeerMassage(peerUuid, messageKey)
+	if err != nil {
+		if debug {
+			log.Printf("Error deleting message %s", err.Error())
+		}
+		return false
 	}
-	ctx := context.Background()
+	return res
+}
 
-	access, err := uplink.ParseAccess(peer.StorjAccessToken)
+/*
+**	Get the messages from message.db
+**	TODO: Only return the last X newest messages ordered by time
+**	TODO: Provide a timestring, if message from today use the time, else use Mon..Sun, if older use 12 Mär
+**	TODO: Readed should be filled if receiver deleted the message
+ */
+func GetMessages() string {
+	msgList := make([]MessageTO, 0)
+	for key, msg := range messageMap {
+		msgList = append(msgList, MessageTO{Key: key, From: msg.From, Message: msg.Message, Time: "todo", Read: false})
+	}
+	jsonData, err := json.Marshal(msgList)
 	if err != nil {
 		if debug {
-			log.Printf("parse access failed %s", err.Error())
+			log.Println("An error occured marshalling the messages: " + err.Error())
 		}
-		return "2"
+		return ""
 	}
-	err = delete(messageKey, peer.StorjBucket, ctx, access)
-	if err != nil {
-		if debug {
-			log.Println("Error deleting a message: " + err.Error())
+	return string(jsonData)
+}
+
+/*
+**	Loading all new messages for each peer and save them in the database
+ */
+func RefreshMessages() {
+	for peerUuid, peer := range peerMap {
+		keys, err := getMessagesfromPeer(peerUuid)
+		if err != nil {
+			if debug {
+				log.Println("An error occured calling getMessagesFromPeer: " + err.Error())
+				return
+			}
 		}
-		return "3"
+		for _, key := range keys {
+			msg, time, err := getPeerMessage(peerUuid, key)
+			if err != nil {
+				if debug {
+					log.Println("An error occured calling getPeerMessage: " + err.Error())
+				}
+			} else {
+				addMessage(key, peer.Name, msg, peerUuid, time)
+				DeletePeerMassage(peerUuid, key)
+			}
+		}
 	}
-	return "0"
+	writeMessages()
 }
