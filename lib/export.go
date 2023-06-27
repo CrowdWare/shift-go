@@ -602,7 +602,8 @@ func DeletePeerMassage(peerUuid, messageKey string) bool {
 func GetMessages() string {
 	msgList := make([]MessageTO, 0)
 	for key, msg := range messageMap {
-		msgList = append(msgList, MessageTO{Key: key, From: msg.From, Message: msg.Message, Time: "todo", Read: false})
+		log.Println(key)
+		msgList = append(msgList, MessageTO{Key: key, From: msg.From, PeerUuid: msg.PeerUuid, Message: msg.Message, Time: "todo", Read: false})
 	}
 	jsonData, err := json.Marshal(msgList)
 	if err != nil {
