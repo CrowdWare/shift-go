@@ -43,7 +43,8 @@ func createPeer() int {
 }
 
 func addPeer(name string, uuid string, publicKey []byte, storjBucket string, storjAccessToken string) {
-	if existingPeer, ok := peerMap[uuid]; ok {
+	existingPeer, ok := peerMap[uuid]
+	if ok {
 		// update peer
 		existingPeer.CryptoKey = publicKey
 		existingPeer.StorjBucket = storjBucket

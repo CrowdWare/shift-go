@@ -1,5 +1,11 @@
 package lib
 
+import (
+	"os"
+	"runtime"
+	"strings"
+)
+
 var dbFile string
 var peerFile string
 var messageFile string
@@ -38,4 +44,77 @@ func contains(list []Friend, uuid string) int {
 		}
 	}
 	return -1
+}
+
+func decodeUuid(input string) string {
+	decodeMap := strings.NewReplacer(
+		"0", "A",
+		"1", "B",
+		"2", "C",
+		"3", "D",
+		"4", "E",
+		"5", "F",
+		"6", "G",
+		"7", "H",
+		"8", "I",
+		"9", "J",
+		"-", "",
+	)
+	return decodeMap.Replace(input)
+}
+
+func encodeUuid(input string) string {
+	encodeMap := strings.NewReplacer(
+		"A", "0",
+		"B", "1",
+		"C", "2",
+		"D", "3",
+		"E", "4",
+		"F", "5",
+		"G", "6",
+		"H", "7",
+		"I", "8",
+		"J", "9",
+	)
+	if len(input) == 36 && input[8] == '-' && input[13] == '-' && input[18] == '-' && input[23] == '-' {
+		// Input is already in the correct UUID format
+		return input
+	}
+
+	input = encodeMap.Replace(input)
+
+	// Insert hyphens at specific positions
+	encodedUUID := strings.Builder{}
+	for i, c := range input {
+		if i == 8 || i == 12 || i == 16 || i == 20 {
+			encodedUUID.WriteRune('-')
+		}
+		encodedUUID.WriteRune(c)
+	}
+
+	return encodedUUID.String()
+}
+
+func isDevice() bool {
+	// Check the value of the runtime.GOARCH
+	goarch := runtime.GOARCH
+	if goarch == "x86" || goarch == "amd64" {
+		return false // Emulator or virtualized environment
+	}
+
+	// Check the value of the ANDROID_EMULATOR environment variable
+	emulator := os.Getenv("ANDROID_EMULATOR")
+	if emulator == "1" {
+		return false // Emulator
+	}
+
+	// Check if the /sys/qemu_trace file exists
+	_, err := os.Stat("/sys/qemu_trace")
+	if err == nil {
+		return false // Emulator or virtualized environment
+	}
+	if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
+		return false
+	}
+	return true
 }

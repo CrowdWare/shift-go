@@ -7,7 +7,9 @@ import (
 	"math/rand"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/crowdware/shift-go/lib"
@@ -172,5 +174,7 @@ func main() {
 }
 
 func test() {
-
+	goos := strings.ToLower(os.Getenv("GOOS"))
+	fmt.Println("OS: " + goos)
+	fmt.Println(runtime.GOOS)
 }

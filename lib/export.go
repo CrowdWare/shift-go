@@ -7,9 +7,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
-	"os"
-	"runtime"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -52,43 +49,18 @@ func Init(filesDir string) {
 	dbFile = filesDir + "/shift.db"
 	peerFile = filesDir + "/peers.db"
 	messageFile = filesDir + "/messages.db"
-	if fileExists(peerFile) {
-		readPeers()
-	} else {
-		createPeer()
+	if account.Uuid != "" {
+		if fileExists(peerFile) {
+			readPeers()
+		} else {
+			createPeer()
+		}
+		if fileExists(messageFile) {
+			readMessages()
+		} else {
+			createMessages()
+		}
 	}
-	if fileExists(messageFile) {
-		readMessages()
-	} else {
-		createMessages()
-	}
-}
-
-func isDevice() bool {
-	// Check the value of the runtime.GOARCH
-	goarch := runtime.GOARCH
-	if goarch == "x86" || goarch == "amd64" {
-		return false // Emulator or virtualized environment
-	}
-
-	// Check the value of the ANDROID_EMULATOR environment variable
-	emulator := os.Getenv("ANDROID_EMULATOR")
-	if emulator == "1" {
-		return false // Emulator
-	}
-
-	// Check if the /sys/qemu_trace file exists
-	_, err := os.Stat("/sys/qemu_trace")
-	if err == nil {
-		return false // Emulator or virtualized environment
-	}
-
-	// Check the value of the GOOS environment variable
-	goos := strings.ToLower(os.Getenv("GOOS"))
-	if goos == "android" || goos == "ios" {
-		return true // Physical device
-	}
-	return false
 }
 
 /*
@@ -96,6 +68,10 @@ func isDevice() bool {
  */
 func GetUuid() string {
 	return account.Uuid
+}
+
+func GetEncodedUuid() string {
+	return decodeUuid(account.Uuid)
 }
 
 /*
@@ -132,9 +108,10 @@ func IsScooping() bool {
 /*
 **	Create the account and send it to the rest service.
 ** 	This is only called once running the app for the first time.
+**	The invite code may come as uuid or an encoded uuid.
  */
 func CreateAccount(name, uuid, ruuid, country, language string) int {
-	res := addAccount(name, uuid, ruuid, country, language, false)
+	res := addAccount(name, encodeUuid(uuid), ruuid, country, language, false)
 	cp := createPeer()
 	return res + cp
 }
@@ -151,7 +128,7 @@ func GetMatelist() string {
 		hasPerData := p.StorjBucket != "" && p.StorjAccessToken != ""
 		if index > 0 {
 			list[index].HasPeerData = hasPerData
-		} else if key != account.Uuid {
+		} else if key != account.Uuid && key != "" && p.Name != "" {
 			list = append(list, Friend{Name: p.Name, Uuid: key, HasPeerData: hasPerData})
 		}
 	}
@@ -472,15 +449,23 @@ func GetPeerQRCode() string {
 	peer, ok := peerMap[account.Uuid]
 	if ok {
 		if peer.StorjBucket == "" || peer.StorjAccessToken == "" {
+			if debug {
+				log.Println("Peer storj data is empty for account: " + account.Uuid)
+			}
 			return ""
 		}
+	} else {
+		if debug {
+			log.Println("Peer not found: " + account.Uuid)
+		}
+		return ""
 	}
-
+	log.Println("GetPeerCode " + peer.Name + ", " + account.Uuid + ", " + peer.Uuid)
 	// Decode the private key from the string
 	block, _ := pem.Decode(peer.CryptoKey)
 	if block == nil || block.Type != "RSA PRIVATE KEY" {
 		if debug {
-			fmt.Println("Failed to decode private key")
+			fmt.Println("Failed to decode private key: " + peer.Name + ", " + peer.Uuid + ", [" + string(peer.CryptoKey) + "]")
 		}
 		return ""
 	}
@@ -518,11 +503,17 @@ func SetStorj(bucketName string, accessKey string) bool {
 	if bucketName == "" && accessKey == "" {
 		return false
 	}
-	peer, _ := peerMap[account.Uuid]
+	peer, ok := peerMap[account.Uuid]
+	if !ok {
+		log.Println("peer not found: " + account.Uuid)
+		return false
+	}
+	log.Println("setstorj " + peer.Name + ", " + peer.Uuid)
 	peer.StorjBucket = bucketName
 	peer.StorjAccessToken = accessKey
 	peerMap[account.Uuid] = peer
 	writePeers()
+
 	return true
 }
 
@@ -554,9 +545,10 @@ func GetAccessToken() string {
 func SendMessageToPeer(peerUuid string, message string) string {
 	peer, ok := peerMap[peerUuid]
 	if !ok {
+		log.Println("sendMessage peer not found " + peerUuid + " " + message)
 		return "1"
 	}
-
+	log.Println("sendMessage " + peerUuid + " " + message)
 	ctx := context.Background()
 
 	access, err := uplink.ParseAccess(peer.StorjAccessToken)
