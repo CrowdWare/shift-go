@@ -35,7 +35,7 @@ func createPeer() int {
 		Type:  "RSA PRIVATE KEY",
 		Bytes: privateKeyBytes,
 	})
-
+	log.Println("Create peer: " + account.Name + ", " + account.Uuid)
 	localPeer := _peer{Uuid: account.Uuid, Name: account.Name, CryptoKey: privateKeyPEM, StorjBucket: "", StorjAccessToken: ""}
 	peerMap[account.Uuid] = localPeer
 	writePeers()

@@ -113,6 +113,7 @@ func IsScooping() bool {
 func CreateAccount(name, uuid, ruuid, country, language string) int {
 	res := addAccount(name, encodeUuid(uuid), ruuid, country, language, false)
 	cp := createPeer()
+	createMessages()
 	return res + cp
 }
 
