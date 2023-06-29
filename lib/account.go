@@ -66,8 +66,10 @@ func addAccount(name, _uuid, ruuid, country, language string, test bool) int {
 		Language: language,
 	}
 	res := registerAccount(name, _uuid, ruuid, country, language, test)
-	addTransaction(uuid.New().String(), initialAmount, "", time.Now(), "", "", InitialBooking, "")
-	writeAccount()
+	if res == 0 {
+		addTransaction(uuid.New().String(), initialAmount, "", time.Now(), "", "", InitialBooking, "")
+		writeAccount()
+	}
 	return res
 }
 
