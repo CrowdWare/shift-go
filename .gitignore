@@ -1,5 +1,6 @@
 *.jar
 *.aar
+*.temp
 .DS_Store
 shift-go
 crypto_vars.go
