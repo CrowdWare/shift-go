@@ -11,3 +11,6 @@ I want my users to trust our apps.
 - Let other developers find mistakes
 
 So today I open up the source code.
+
+# run
+In order to run you should rename crypto_vars.go.sample to cyrpto_vars.go and edit the values, like you will find in release.sh.
