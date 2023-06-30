@@ -1,17 +1,17 @@
-#shift-go
+# shift-go
 
 Shift-go is a Go library that serves as the business logic for the Shift Android app. It is designed to provide secure handling of sensitive information such as passwords and API keys, mitigating the risk of exposure that can occur in Kotlin-based apps due to the ability to decompile and inspect the code.
-#Motivation
+# Motivation
 
 The decision to develop this library in Go and make it open source was driven by a desire to build trust with our users. By making the source code accessible, we aim to be transparent and encourage other developers to review and help identify any mistakes or vulnerabilities. Our goal is to ensure the security and privacy of our users.
-#Getting Started
+# Getting Started
 
 To run the library, follow these steps:  
 
 Rename crypto_vars.go.sample to crypto_vars.go.
 Edit the values in crypto_vars.go according to the instructions provided in release.sh.
 
-#Ethical Hacking
+# Ethical Hacking
 
 The purpose of this software is not financial gain, but rather to contribute to the freedom and well-being of humanity. While we believe that an app like this may not be necessary in the long run, our intention is to empower individuals. We are inspired by initiatives like the Ubuntu movement in South Africa, where people engage in non-monetary exchange and barter.
 
