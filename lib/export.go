@@ -63,6 +63,10 @@ func Init(filesDir string) {
 	}
 }
 
+func CanScoop() bool {
+	return isDevice()
+}
+
 /*
 **	Return the account Uuid
  */
@@ -605,7 +609,7 @@ func GetMessages() string {
 	msgList := make([]MessageTO, 0)
 	for key, msg := range messageMap {
 		log.Println(key)
-		msgList = append(msgList, MessageTO{Key: key, From: msg.From, PeerUuid: msg.PeerUuid, Message: msg.Message, Time: "todo", Read: false})
+		msgList = append(msgList, MessageTO{Key: key, From: msg.From, PeerUuid: msg.PeerUuid, Message: msg.Message, Time: formatTime(msg.Time), Read: false})
 	}
 	jsonData, err := json.Marshal(msgList)
 	if err != nil {

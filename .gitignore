@@ -2,3 +2,4 @@
 *.aar
 .DS_Store
 shift-go
+crypto_vars.go

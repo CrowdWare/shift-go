@@ -4,6 +4,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 )
 
 var dbFile string
@@ -117,4 +118,35 @@ func isDevice() bool {
 		return false
 	}
 	return true
+}
+
+func formatTime(t time.Time) string {
+	now := time.Now().Local()
+
+	if t.Year() == now.Year() && t.Month() == now.Month() && t.Day() == now.Day() {
+		return t.Format("15:04")
+	}
+
+	tISOYear, tISOWeek := t.ISOWeek()
+	nowISOYear, nowISOWeek := now.ISOWeek()
+
+	if tISOYear == nowISOYear && tISOWeek == nowISOWeek {
+		switch t.Weekday() {
+		case time.Monday:
+			return "Mo"
+		case time.Tuesday:
+			return "Di"
+		case time.Wednesday:
+			return "Mi"
+		case time.Thursday:
+			return "Do"
+		case time.Friday:
+			return "Fr"
+		case time.Saturday:
+			return "Sa"
+		case time.Sunday:
+			return "So"
+		}
+	}
+	return t.Format("02.01.2006")
 }
