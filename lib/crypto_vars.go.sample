@@ -1,0 +1,17 @@
+// DO NOT PUBLISH
+
+package lib
+
+const debug = true
+const initial_amount = 50 // only while testing
+
+const var1 = 0000
+const var2 = 0000
+const var3 = 00
+const var4 = 000000
+const var5 = 000000
+
+const secret_key_enc = "<secret>"
+const api_key_enc = "<secret>"
+const client_key_enc = "<secret>"
+const service_url_enc = "<secret>"
