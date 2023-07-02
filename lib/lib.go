@@ -36,6 +36,7 @@ var growLevel0 = int64(10000)
 var growLevel1 = int64(1800)
 var growLevel2 = int64(360)
 var growLevel3 = int64(75)
+var useWebService bool
 
 const (
 	algorithm = "AES/GCM/NoPadding"

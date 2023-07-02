@@ -32,7 +32,7 @@ func TestCreateAccount(t *testing.T) {
 }
 
 func TestSetScooping(t *testing.T) {
-	Init("/tmp")
+	Init("/tmp", true)
 	res := setScooping(true)
 	if res != 0 {
 		t.Errorf("Expected to get Success but got %d", res)

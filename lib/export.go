@@ -57,7 +57,7 @@ type MessageTO struct {
 /*
 **	Set the path where the db can be stored.
  */
-func Init(filesDir string) {
+func Init(filesDir string, useWS bool) {
 	// avoid scooping on a desktop
 	if !isDevice() {
 		growLevel0 = 0
@@ -68,6 +68,7 @@ func Init(filesDir string) {
 	dbFile = filesDir + "/shift.db"
 	peerFile = filesDir + "/peers.db"
 	messageFile = filesDir + "/messages.db"
+	useWebService = useWS
 	if account.Uuid != "" {
 		if fileExists(peerFile) {
 			readPeers()
@@ -110,6 +111,13 @@ func GetName() string {
 func SetName(name string) {
 	account.Name = name
 	writeAccount()
+}
+
+/*
+**	Inform the lib to use WS or not
+ */
+func SetUseWebService(useWS bool) {
+	useWebService = useWS
 }
 
 /*

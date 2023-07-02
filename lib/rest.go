@@ -38,6 +38,10 @@ func registerAccount(
 	language string,
 	test bool,
 ) int {
+	if !useWebService {
+		return 0
+	}
+
 	// makes no sense to register an account without invite code
 	if ruuid == "" {
 		return 1
@@ -112,6 +116,16 @@ func registerAccount(
 }
 
 func setScooping(test bool) int {
+	if !useWebService {
+		account.IsScooping = true
+		account.Scooping = time.Now()
+		account.Level_1_count = 0
+		account.Level_2_count = 0
+		account.Level_3_count = 0
+		writeAccount()
+		return 0
+	}
+
 	client := http.Client{}
 
 	url, err := decryptStringGCM(service_url_enc, false)
@@ -205,6 +219,10 @@ func setScooping(test bool) int {
 
 func getMatelist(test bool) []Friend {
 	emptyList := make([]Friend, 0)
+	if !useWebService {
+		return emptyList
+	}
+
 	client := http.Client{}
 	url, err := decryptStringGCM(service_url_enc, false)
 	if err != nil {
