@@ -629,7 +629,7 @@ func DeletePeerMassage(peerUuid, messageKey string) bool {
 /*
 **	Get the messages from message.db
 **	TODO: Only return the last X newest messages ordered by time
-**	TODO: Provide a timestring, if message from today use the time, else use Mon..Sun, if older use 12 Mär
+**	TODO: Paging, read first 50 messages, then read 51-100, and so forth
 **	TODO: Readed should be filled if receiver deleted the message
  */
 func GetMessages() string {
