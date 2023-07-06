@@ -142,7 +142,7 @@ func IsScooping() bool {
 **	The invite code may come as uuid or an encoded uuid.
  */
 func CreateAccount(name, uuid, ruuid, country, language string) int {
-	res := addAccount(name, encodeUuid(uuid), ruuid, country, language, false)
+	res := addAccount(name, uuid, encodeUuid(ruuid), country, language, false)
 	if res == 0 {
 		res = createPeer()
 		createMessages()

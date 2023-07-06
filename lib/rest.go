@@ -277,7 +277,7 @@ func getMatelist(test bool) []Friend {
 	message := jsonResponse["message"].(string)
 	if isError {
 		if debug {
-			log.Println("Error occured calling register: " + message)
+			log.Println("Error occured calling getmatelist: " + message)
 		}
 		return emptyList
 	} else {

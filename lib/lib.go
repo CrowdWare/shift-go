@@ -112,7 +112,6 @@ func encodeUuid(input string) string {
 		}
 		encodedUUID.WriteRune(c)
 	}
-
 	return encodedUUID.String()
 }
 
