@@ -207,13 +207,15 @@ func setScooping(test bool) int {
 			}
 			return 8
 		}
-		account.IsScooping = true
-		account.Scooping = time.Now()
-		account.Level_1_count = int(jsonResponse["count_1"].(float64))
-		account.Level_2_count = int(jsonResponse["count_2"].(float64))
-		account.Level_3_count = int(jsonResponse["count_3"].(float64))
-		writeAccount()
-		return 0
+		/*
+			account.IsScooping = true
+			account.Scooping = time.Now()
+			account.Level_1_count = int(jsonResponse["count_1"].(float64))
+			account.Level_2_count = int(jsonResponse["count_2"].(float64))
+			account.Level_3_count = int(jsonResponse["count_3"].(float64))
+			writeAccount()
+		*/
+		return 1
 	}
 }
 
