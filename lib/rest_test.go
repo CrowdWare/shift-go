@@ -34,19 +34,19 @@ func TestCreateAccount(t *testing.T) {
 func TestSetScooping(t *testing.T) {
 	Init("/tmp", true)
 	res := setScooping(true)
-	if res != 1 {
+	if res != 0 {
 		t.Errorf("Expected to get Success but got %d", res)
 	}
 	readAccount()
-	if account.Level_1_count != 0 {
+	if account.Level_1_count != 9 {
 		t.Errorf("Expected to get Level1 as 9 but got %d", account.Level_1_count)
 	}
 
-	if account.Level_2_count != 0 {
+	if account.Level_2_count != 99 {
 		t.Errorf("Expected to get Level1 as 99 but got %d", account.Level_2_count)
 	}
 
-	if account.Level_3_count != 0 {
+	if account.Level_3_count != 999 {
 		t.Errorf("Expected to get Level1 as 999 but got %d", account.Level_3_count)
 	}
 	os.Remove("/tmp/shift.db")

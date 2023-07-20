@@ -39,6 +39,12 @@ func registerAccount(
 	test bool,
 ) int {
 	if !useWebService {
+		account.IsScooping = true
+		account.Scooping = time.Now()
+		account.Level_1_count = 0
+		account.Level_2_count = 0
+		account.Level_3_count = 0
+		writeAccount()
 		return 0
 	}
 
@@ -207,15 +213,13 @@ func setScooping(test bool) int {
 			}
 			return 8
 		}
-		/*
-			account.IsScooping = true
-			account.Scooping = time.Now()
-			account.Level_1_count = int(jsonResponse["count_1"].(float64))
-			account.Level_2_count = int(jsonResponse["count_2"].(float64))
-			account.Level_3_count = int(jsonResponse["count_3"].(float64))
-			writeAccount()
-		*/
-		return 1
+		account.IsScooping = true
+		account.Scooping = time.Now()
+		account.Level_1_count = int(jsonResponse["count_1"].(float64))
+		account.Level_2_count = int(jsonResponse["count_2"].(float64))
+		account.Level_3_count = int(jsonResponse["count_3"].(float64))
+		writeAccount()
+		return 0
 	}
 }
 
