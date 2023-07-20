@@ -43,11 +43,11 @@ func TestSetScooping(t *testing.T) {
 	}
 
 	if account.Level_2_count != 99 {
-		t.Errorf("Expected to get Level1 as 99 but got %d", account.Level_2_count)
+		t.Errorf("Expected to get Level2 as 99 but got %d", account.Level_2_count)
 	}
 
 	if account.Level_3_count != 999 {
-		t.Errorf("Expected to get Level1 as 999 but got %d", account.Level_3_count)
+		t.Errorf("Expected to get Level3 as 999 but got %d", account.Level_3_count)
 	}
 	os.Remove("/tmp/shift.db")
 }
