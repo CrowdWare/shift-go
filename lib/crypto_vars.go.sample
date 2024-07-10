@@ -12,6 +12,4 @@ const var4 = 000000
 const var5 = 000000
 
 const secret_key_enc = "<secret>"
-const api_key_enc = "<secret>"
 const client_key_enc = "<secret>"
-const service_url_enc = "<secret>"

@@ -13,41 +13,27 @@ import (
 	"github.com/crowdware/shift-go/lib"
 )
 
-func readPythonConfig(filePath string) (string, string, string, string, error) {
+func readPythonConfig(filePath string) (string, string, error) {
 	fileContent, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return "", "", "", "", fmt.Errorf("failed to read file: %v", err)
+		return "", "", fmt.Errorf("failed to read file: %v", err)
 	}
 
-	re := regexp.MustCompile(`SHIFT_API_KEY\s*=\s*"(.*?)"`)
+	re := regexp.MustCompile(`SHIFT_CLIENT_KEY\s*=\s*"(.*?)"`)
 	match := re.FindStringSubmatch(string(fileContent))
 	if len(match) != 2 {
-		return "", "", "", "", fmt.Errorf("unable to find SHIFT_API_KEY in the file")
-	}
-	apiKey := match[1]
-
-	re = regexp.MustCompile(`SHIFT_CLIENT_KEY\s*=\s*"(.*?)"`)
-	match = re.FindStringSubmatch(string(fileContent))
-	if len(match) != 2 {
-		return "", "", "", "", fmt.Errorf("unable to find SHIFT_CLIENT_KEY in the file")
+		return "", "", fmt.Errorf("unable to find SHIFT_CLIENT_KEY in the file")
 	}
 	clientKey := match[1]
 
 	re = regexp.MustCompile(`SHIFT_SECRET_KEY\s*=\s*"(.*?)"`)
 	match = re.FindStringSubmatch(string(fileContent))
 	if len(match) != 2 {
-		return "", "", "", "", fmt.Errorf("unable to find SHIFT_SECRET_KEY in the file")
+		return "", "", fmt.Errorf("unable to find SHIFT_SECRET_KEY in the file")
 	}
 	secretkey := match[1]
 
-	re = regexp.MustCompile(`SERVICE_URL\s*=\s*"(.*?)"`)
-	match = re.FindStringSubmatch(string(fileContent))
-	if len(match) != 2 {
-		return "", "", "", "", fmt.Errorf("unable to find SERVICE_URL in the file")
-	}
-	serviceUrl := match[1]
-
-	return apiKey, secretkey, clientKey, serviceUrl, nil
+	return secretkey, clientKey, nil
 }
 
 func generateRandomNumber(min, max int) int {
@@ -75,9 +61,7 @@ func writeVars() {
 	text += "const var5 = " + strconv.Itoa(generateRandomNumber(100000, 999999)) + "\n"
 	text += "\n"
 	text += "const secret_key_enc = \"\"\n"
-	text += "const api_key_enc = \"\"\n"
 	text += "const client_key_enc = \"\"\n"
-	text += "const service_url_enc = \"\"\n"
 
 	_, err = writer.WriteString(text)
 	if err != nil {
@@ -127,7 +111,7 @@ func secret() {
 
 	text += "\n"
 
-	api_key, secret_key, client_key, service_url, err := readPythonConfig("shift_keys.py")
+	secret_key, client_key, err := readPythonConfig("shift_keys.py")
 	if err != nil {
 		fmt.Println("Error reading Python config:", err)
 		return
@@ -135,15 +119,8 @@ func secret() {
 	secret_key_enc := lib.Encrypt(secret_key)
 	text += "const secret_key_enc = \"" + secret_key_enc + "\"\n"
 
-	// there was a reason that I used this extra bytes, at least it feels better
-	api_key_enc := lib.Encrypt(api_key + "8764398347362489")
-	text += "const api_key_enc = \"" + api_key_enc + "\"\n"
-
 	client_key_enc := lib.Encrypt(client_key)
 	text += "const client_key_enc = \"" + client_key_enc + "\"\n"
-
-	service_url_enc := lib.Encrypt(service_url)
-	text += "const service_url_enc = \"" + service_url_enc + "\"\n"
 
 	_, err = writer.WriteString(text)
 	if err != nil {

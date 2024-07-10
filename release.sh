@@ -1,5 +1,5 @@
 #!/bin/bash
-version="1.2.0"
+version="1.3.0"
 go run . vars
 mv ./lib/crypto_vars.go.temp ./lib/crypto_vars.go
 

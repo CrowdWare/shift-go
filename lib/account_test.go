@@ -111,9 +111,6 @@ func TestCheckScooping(t *testing.T) {
 	}
 
 	account.IsScooping = true
-	account.Level_1_count = 9
-	account.Level_2_count = 99
-	account.Level_3_count = 999
 	account.Scooping = time.Now().Add(time.Hour * -20)
 	res = checkScooping()
 	if res == true {
@@ -123,8 +120,8 @@ func TestCheckScooping(t *testing.T) {
 		t.Errorf("Expected transaction count to be 2 but got %d", len(account.Transactions))
 	}
 	balance := GetBalanceInMillis()
-	if balance != 146000 {
-		t.Errorf("Expected balance to be 136000 + 10000 but got %d", balance)
+	if balance != 20000 {
+		t.Errorf("Expected balance to be 20000 but got %d", balance)
 	}
 	account.IsScooping = true
 	account.Scooping = time.Now().Add(time.Hour * -19)

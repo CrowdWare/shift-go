@@ -76,20 +76,17 @@ type _transaction struct {
 	Uuid    string // receiver uuid
 }
 
-func addAccount(name, _uuid, ruuid, country, language string, test bool) int {
+func addAccount(name, _uuid, language string, test bool) int {
 	account = _account{
 		Name:     strings.TrimSpace(name),
 		Uuid:     strings.TrimSpace(_uuid),
-		Ruuid:    strings.TrimSpace(ruuid),
-		Country:  country,
+		Ruuid:    "",
+		Country:  "",
 		Language: language,
 	}
-	res := registerAccount(name, _uuid, ruuid, country, language, test)
-	if res == 0 {
-		addTransaction(uuid.New().String(), initialAmount, "", time.Now(), "", "", InitialBooking, "")
-		writeAccount()
-	}
-	return res
+	addTransaction(uuid.New().String(), initialAmount, "", time.Now(), "", "", InitialBooking, "")
+	writeAccount()
+	return 0
 }
 
 func addTransaction(pkey string, amount int64, purpose string, date time.Time, from string, to string, typ TransactionType, _uuid string) error {
@@ -153,23 +150,6 @@ func writeAccount() {
 	}
 }
 
-func calcGrowPerDay() int64 {
-	grow := int64(growLevel0) +
-		int64(min(account.Level_1_count, 10))*growLevel1 +
-		int64(min(account.Level_2_count, 100))*growLevel2 +
-		int64(min(account.Level_3_count, 1000))*growLevel3
-	return grow / 1000
-}
-
-func calcGrowPerDiff(duration time.Duration) int64 {
-	hours := math.Min(20, duration.Hours())
-	grow := float64(growLevel0)/20*hours +
-		float64(min(account.Level_1_count, 10))*float64(growLevel1)/20*hours +
-		float64(min(account.Level_2_count, 100))*float64(growLevel2)/20*hours +
-		float64(min(account.Level_3_count, 1000))*float64(growLevel3)/20*hours
-	return int64(grow)
-}
-
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -206,4 +186,15 @@ func transactionExists(pkey string) bool {
 		}
 	}
 	return false
+}
+
+func calcGrowPerDay() int64 {
+	grow := int64(growLevel0)
+	return grow / 1000
+}
+
+func calcGrowPerDiff(duration time.Duration) int64 {
+	hours := math.Min(20, duration.Hours())
+	grow := float64(growLevel0) / 20 * hours
+	return int64(grow)
 }

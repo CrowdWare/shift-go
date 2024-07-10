@@ -20,7 +20,6 @@
 package lib
 
 import (
-	"context"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -29,7 +28,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"storj.io/uplink"
 )
 
 /*
@@ -57,28 +55,19 @@ type MessageTO struct {
 /*
 **	Set the path where the db can be stored.
  */
-func Init(filesDir string, useWS bool) {
+func Init(filesDir string) {
 	// avoid scooping on a desktop
 	if !isDevice() {
 		growLevel0 = 0
-		growLevel1 = 0
-		growLevel2 = 0
-		growLevel3 = 0
 	}
 	dbFile = filesDir + "/shift.db"
 	peerFile = filesDir + "/peers.db"
 	messageFile = filesDir + "/messages.db"
-	useWebService = useWS
 	if account.Uuid != "" {
 		if fileExists(peerFile) {
 			readPeers()
 		} else {
 			createPeer()
-		}
-		if fileExists(messageFile) {
-			readMessages()
-		} else {
-			createMessages()
 		}
 	}
 }
@@ -114,13 +103,6 @@ func SetName(name string) {
 }
 
 /*
-**	Inform the lib to use WS or not
- */
-func SetUseWebService(useWS bool) {
-	useWebService = useWS
-}
-
-/*
 **	Checks if account has been created already.
  */
 func HasJoined() bool {
@@ -141,28 +123,23 @@ func IsScooping() bool {
 ** 	This is only called once running the app for the first time.
 **	The invite code may come as uuid or an encoded uuid.
  */
-func CreateAccount(name, uuid, ruuid, country, language string) int {
-	res := addAccount(name, uuid, encodeUuid(ruuid), country, language, false)
+func CreateAccount(name, uuid, language string) int {
+	res := addAccount(name, uuid, language, false)
 	if res == 0 {
 		res = createPeer()
-		createMessages()
 	}
 	return res
 }
 
 /*
-**	Get a list of all mates from rest service, pack them into json and return the json string.
-**	We are also adding the user from the peerlist. These are the users with whom we exchanged
-**	Our public key and storj access with.
+**	Get a list of all mates, pack them into json and return the json string.
+**	These are the users with whom we exchanged our public key and storj access with.
  */
 func GetMatelist() string {
-	list := getMatelist(false)
+	list := make([]Friend, 0)
 	for key, p := range peerMap {
-		index := contains(list, key)
 		hasPerData := p.StorjBucket != "" && p.StorjAccessToken != ""
-		if index > 0 {
-			list[index].HasPeerData = hasPerData
-		} else if key != account.Uuid && key != "" && p.Name != "" {
+		if key != account.Uuid && key != "" && p.Name != "" {
 			list = append(list, Friend{Name: p.Name, Uuid: key, HasPeerData: hasPerData})
 		}
 	}
@@ -174,14 +151,16 @@ func GetMatelist() string {
 }
 
 /*
-**	Set the account in scooping mode, scooping is set to now and rest method is called.
-**	The level counts will be set after the rest call.
+**	Set the account in scooping mode, scooping is set to now.
  */
 func StartScooping() int {
 	if account.IsScooping {
 		return 1
 	}
-	return setScooping(false)
+	account.IsScooping = true
+	account.Scooping = time.Now()
+	writeAccount()
+	return 0
 }
 
 /*
@@ -528,149 +507,4 @@ func GetPeerQRCode() string {
 		return ""
 	}
 	return encryptStringGCM(string(jsonData), false)
-}
-
-/*
-**	Saves the Storj Data
- */
-func SetStorj(bucketName string, accessKey string) bool {
-	if bucketName == "" && accessKey == "" {
-		return false
-	}
-	peer, ok := peerMap[account.Uuid]
-	if !ok {
-		log.Println("peer not found: " + account.Uuid)
-		return false
-	}
-	log.Println("setstorj " + peer.Name + ", " + peer.Uuid)
-	peer.StorjBucket = bucketName
-	peer.StorjAccessToken = accessKey
-	peerMap[account.Uuid] = peer
-	writePeers()
-
-	return true
-}
-
-/*
-**	Returns the Storj Bucketname
- */
-func GetBucketName() string {
-	peer, ok := peerMap[account.Uuid]
-	if ok {
-		return peer.StorjBucket
-	}
-	return ""
-}
-
-/*
-**	Return the Storj Access Token
- */
-func GetAccessToken() string {
-	peer, ok := peerMap[account.Uuid]
-	if ok {
-		return peer.StorjAccessToken
-	}
-	return ""
-}
-
-/*
-**	Puts an encrypted message on the Storj bucket from the peer
- */
-func SendMessageToPeer(peerUuid string, message string) string {
-	peer, ok := peerMap[peerUuid]
-	if !ok {
-		log.Println("sendMessage peer not found " + peerUuid + " " + message)
-		return "1"
-	}
-	log.Println("sendMessage " + peerUuid + " " + message)
-	ctx := context.Background()
-
-	access, err := uplink.ParseAccess(peer.StorjAccessToken)
-	if err != nil {
-		if debug {
-			log.Printf("parse access failed %s", err.Error())
-		}
-		return "2"
-	}
-	cipherText, err := encryptString(peer.CryptoKey, message)
-	if err != nil {
-		if debug {
-			log.Println("error encryting the message: " + err.Error())
-		}
-		return "3"
-	}
-
-	messageKey := "shift/messages/" + account.Uuid + "/" + uuid.NewString()
-	err = put(messageKey, cipherText, peer.StorjBucket, ctx, access)
-	if err != nil {
-		if debug {
-			log.Println("put failed: " + err.Error())
-		}
-		return "4"
-	}
-	addMessage(messageKey, peer.Name, message, peerUuid, time.Now())
-	return messageKey
-}
-
-/*
-**	Deletes a message from Storj
- */
-func DeletePeerMassage(peerUuid, messageKey string) bool {
-	res, err := deletePeerMassage(peerUuid, messageKey)
-	if err != nil {
-		if debug {
-			log.Printf("Error deleting message %s", err.Error())
-		}
-		return false
-	}
-	return res
-}
-
-/*
-**	Get the messages from message.db
-**	TODO: Only return the last X newest messages ordered by time
-**	TODO: Paging, read first 50 messages, then read 51-100, and so forth
-**	TODO: Readed should be filled if receiver deleted the message
- */
-func GetMessages() string {
-	msgList := make([]MessageTO, 0)
-	for key, msg := range messageMap {
-		log.Println(key)
-		msgList = append(msgList, MessageTO{Key: key, From: msg.From, PeerUuid: msg.PeerUuid, Message: msg.Message, Time: formatTime(msg.Time), Read: false})
-	}
-	jsonData, err := json.Marshal(msgList)
-	if err != nil {
-		if debug {
-			log.Println("An error occured marshalling the messages: " + err.Error())
-		}
-		return ""
-	}
-	return string(jsonData)
-}
-
-/*
-**	Loading all new messages for each peer and save them in the database
- */
-func RefreshMessages() {
-	for peerUuid, peer := range peerMap {
-		keys, err := getMessagesfromPeer(peerUuid)
-		if err != nil {
-			if debug {
-				log.Println("An error occured calling getMessagesFromPeer: " + err.Error())
-				return
-			}
-		}
-		for _, key := range keys {
-			msg, time, err := getPeerMessage(peerUuid, key)
-			if err != nil {
-				if debug {
-					log.Println("An error occured calling getPeerMessage: " + err.Error())
-				}
-			} else {
-				addMessage(key, peer.Name, msg, peerUuid, time)
-				DeletePeerMassage(peerUuid, key)
-			}
-		}
-	}
-	writeMessages()
 }
